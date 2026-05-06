@@ -1,0 +1,22 @@
+name: Pulse CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: rustup default stable
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @vaexcore/pulse-desktopapp typecheck
+      - run: pnpm run smoke:studio
+      - run: cargo test
+        working-directory: apps/desktopapp/src-tauri
