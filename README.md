@@ -89,7 +89,9 @@ The packaged macOS identity is:
 - Package name: `vaexcore-pulse`
 - Bundle name: `vaexcore pulse.app`
 - App ID: `com.vaexil.vaexcore.pulse`
-- App data path: `~/Library/Application Support/vaexcore pulse`
+- App data path:
+  - macOS: `~/Library/Application Support/vaexcore pulse`
+  - Windows: `%APPDATA%\vaexcore pulse`
 
 ## Verify The Repo
 

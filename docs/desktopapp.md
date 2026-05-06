@@ -38,6 +38,8 @@ The packaged app is `vaexcore pulse.app`.
 - Product name: `vaexcore pulse`
 - Bundle ID: `com.vaexil.vaexcore.pulse`
 - Release output: `release/mac-<arch>/vaexcore pulse.app`
-- App data path: `~/Library/Application Support/vaexcore pulse`
+- App data path:
+  - macOS: `~/Library/Application Support/vaexcore pulse`
+  - Windows: `%APPDATA%\vaexcore pulse`
 
 Use `pnpm release:unsigned` for local unsigned tester artifacts.

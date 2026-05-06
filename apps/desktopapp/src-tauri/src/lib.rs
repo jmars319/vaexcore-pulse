@@ -456,7 +456,7 @@ fn open_settings_window(app: tauri::AppHandle, section: Option<String>) -> Resul
 fn launch_vaexcore_suite() -> Vec<SuiteLaunchResult> {
     VAEXCORE_SUITE_APPS
         .iter()
-        .map(|app_name| launch_macos_app(app_name))
+        .map(|app_name| launch_desktop_app(app_name))
         .collect()
 }
 
@@ -544,7 +544,7 @@ fn consume_suite_commands() -> Vec<SuiteCommandDocument> {
     commands
 }
 
-fn launch_macos_app(app_name: &str) -> SuiteLaunchResult {
+fn launch_desktop_app(app_name: &str) -> SuiteLaunchResult {
     #[cfg(target_os = "macos")]
     {
         match Command::new("open").args(["-a", app_name]).output() {
@@ -573,12 +573,46 @@ fn launch_macos_app(app_name: &str) -> SuiteLaunchResult {
         }
     }
 
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(executable_path) = windows_app_executable_path(app_name) {
+            return match Command::new(&executable_path).spawn() {
+                Ok(_) => SuiteLaunchResult {
+                    app_name: app_name.to_string(),
+                    ok: true,
+                    detail: format!("Launch requested: {}.", executable_path.display()),
+                },
+                Err(error) => SuiteLaunchResult {
+                    app_name: app_name.to_string(),
+                    ok: false,
+                    detail: error.to_string(),
+                },
+            };
+        }
+
+        match Command::new("cmd")
+            .args(["/C", "start", "", app_name])
+            .spawn()
+        {
+            Ok(_) => SuiteLaunchResult {
+                app_name: app_name.to_string(),
+                ok: true,
+                detail: "Launch requested through Windows shell.".to_string(),
+            },
+            Err(error) => SuiteLaunchResult {
+                app_name: app_name.to_string(),
+                ok: false,
+                detail: format!("Could not find or launch the Windows app: {error}"),
+            },
+        }
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
         SuiteLaunchResult {
             app_name: app_name.to_string(),
             ok: false,
-            detail: "Launch Suite is only implemented for macOS Applications.".to_string(),
+            detail: "Launch Suite is not implemented on this platform.".to_string(),
         }
     }
 }
@@ -633,6 +667,8 @@ fn pulse_suite_local_runtime(app_data_dir: Option<&Path>) -> SuiteLocalRuntime {
     let ffmpeg_available = find_executable(
         "ffmpeg",
         &[
+            "C:\\ffmpeg\\bin\\ffmpeg.exe",
+            "C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe",
             "/opt/homebrew/bin/ffmpeg",
             "/usr/local/bin/ffmpeg",
             "/usr/bin/ffmpeg",
@@ -641,16 +677,7 @@ fn pulse_suite_local_runtime(app_data_dir: Option<&Path>) -> SuiteLocalRuntime {
     .is_some();
     let app_storage_dir = app_data_dir
         .map(|path| path.display().to_string())
-        .unwrap_or_else(|| {
-            env::var("HOME")
-                .map(PathBuf::from)
-                .unwrap_or_else(|_| PathBuf::from("."))
-                .join("Library")
-                .join("Application Support")
-                .join("vaexcore pulse")
-                .display()
-                .to_string()
-        });
+        .unwrap_or_else(|| app_data_dir_for("vaexcore pulse").display().to_string());
 
     SuiteLocalRuntime {
         contract_version: SUITE_DISCOVERY_SCHEMA_VERSION,
@@ -739,9 +766,7 @@ fn suite_app_definitions() -> [SuiteAppDefinition; 3] {
 
 fn suite_app_status(definition: &SuiteAppDefinition) -> SuiteAppStatus {
     let discovery_file = suite_discovery_file(definition.app_id);
-    let installed = Path::new("/Applications")
-        .join(format!("{}.app", definition.launch_name))
-        .exists();
+    let installed = desktop_app_is_installed(definition.launch_name);
     let discovery = read_suite_discovery_document(&discovery_file);
     let pid = discovery.as_ref().map(|document| document.pid);
     let running = pid.is_some_and(process_is_running);
@@ -812,7 +837,7 @@ fn suite_status_detail(
     reachable: bool,
 ) -> String {
     if !installed {
-        return "Install this app in /Applications.".to_string();
+        return platform_install_hint().to_string();
     }
     if !discovered {
         return "No suite heartbeat has been published yet.".to_string();
@@ -830,13 +855,132 @@ fn suite_status_detail(
 }
 
 fn suite_discovery_dir() -> PathBuf {
-    env::var("HOME")
+    vaexcore_shared_data_dir().join("suite")
+}
+
+fn vaexcore_shared_data_dir() -> PathBuf {
+    if cfg!(target_os = "windows") {
+        return env::var_os("APPDATA")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| {
+                env::var_os("USERPROFILE")
+                    .map(PathBuf::from)
+                    .unwrap_or_else(|| PathBuf::from("."))
+                    .join("AppData")
+                    .join("Roaming")
+            })
+            .join("vaexcore");
+    }
+
+    if cfg!(target_os = "macos") {
+        return env::var("HOME")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join("Library")
+            .join("Application Support")
+            .join("vaexcore");
+    }
+
+    env::var_os("XDG_DATA_HOME")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join("Library")
-        .join("Application Support")
+        .unwrap_or_else(|| {
+            env::var_os("HOME")
+                .map(PathBuf::from)
+                .unwrap_or_else(|| PathBuf::from("."))
+                .join(".local")
+                .join("share")
+        })
         .join("vaexcore")
-        .join("suite")
+}
+
+fn app_data_dir_for(app_dir_name: &str) -> PathBuf {
+    if cfg!(target_os = "windows") {
+        return env::var_os("APPDATA")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| {
+                env::var_os("USERPROFILE")
+                    .map(PathBuf::from)
+                    .unwrap_or_else(|| PathBuf::from("."))
+                    .join("AppData")
+                    .join("Roaming")
+            })
+            .join(app_dir_name);
+    }
+
+    if cfg!(target_os = "macos") {
+        return env::var("HOME")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join("Library")
+            .join("Application Support")
+            .join(app_dir_name);
+    }
+
+    env::var_os("XDG_DATA_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            env::var_os("HOME")
+                .map(PathBuf::from)
+                .unwrap_or_else(|| PathBuf::from("."))
+                .join(".local")
+                .join("share")
+        })
+        .join(app_dir_name)
+}
+
+fn desktop_app_is_installed(app_name: &str) -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        return Path::new("/Applications")
+            .join(format!("{app_name}.app"))
+            .exists();
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        return windows_app_executable_path(app_name).is_some();
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        let _ = app_name;
+        false
+    }
+}
+
+fn platform_install_hint() -> &'static str {
+    if cfg!(target_os = "windows") {
+        "Install this app with the Windows installer or place it under LocalAppData\\Programs."
+    } else if cfg!(target_os = "macos") {
+        "Install this app in /Applications."
+    } else {
+        "Install this app for the current desktop platform."
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn windows_app_executable_path(app_name: &str) -> Option<PathBuf> {
+    windows_app_executable_candidates(app_name)
+        .into_iter()
+        .find(|path| path.is_file())
+}
+
+#[cfg(target_os = "windows")]
+fn windows_app_executable_candidates(app_name: &str) -> Vec<PathBuf> {
+    let executable = format!("{app_name}.exe");
+    let mut candidates = Vec::new();
+    for root in [
+        env::var_os("LOCALAPPDATA").map(PathBuf::from),
+        env::var_os("ProgramFiles").map(PathBuf::from),
+        env::var_os("ProgramFiles(x86)").map(PathBuf::from),
+    ]
+    .into_iter()
+    .flatten()
+    {
+        candidates.push(root.join("Programs").join(app_name).join(&executable));
+        candidates.push(root.join(app_name).join(&executable));
+    }
+    candidates
 }
 
 fn suite_handoff_dir() -> PathBuf {
@@ -910,12 +1054,31 @@ fn suite_discovery_is_stale(path: &Path) -> bool {
 }
 
 fn process_is_running(pid: u32) -> bool {
-    let pid_arg = pid.to_string();
-    Command::new("ps")
-        .args(["-p", pid_arg.as_str()])
-        .output()
-        .map(|output| output.status.success())
-        .unwrap_or(false)
+    #[cfg(target_os = "windows")]
+    {
+        let pid_arg = pid.to_string();
+        let filter = format!("PID eq {pid_arg}");
+        return Command::new("tasklist")
+            .args(["/FI", filter.as_str(), "/NH"])
+            .output()
+            .map(|output| {
+                output.status.success()
+                    && String::from_utf8_lossy(&output.stdout)
+                        .to_ascii_lowercase()
+                        .contains(&pid_arg)
+            })
+            .unwrap_or(false);
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let pid_arg = pid.to_string();
+        Command::new("ps")
+            .args(["-p", pid_arg.as_str()])
+            .output()
+            .map(|output| output.status.success())
+            .unwrap_or(false)
+    }
 }
 
 fn health_url_is_reachable(url: &str) -> bool {
@@ -1058,22 +1221,38 @@ fn stop_local_services<R: Runtime>(app: &tauri::AppHandle<R>) {
 }
 
 fn spawn_analyzer(repo_root: &Path) -> Result<SpawnedLocalService, String> {
-    let python = find_executable(
-        "python3",
-        &[
-            "/opt/homebrew/bin/python3",
-            "/usr/local/bin/python3",
-            "/usr/bin/python3",
-        ],
-    )
+    let python = if cfg!(target_os = "windows") {
+        find_executable("python", &[])
+            .or_else(|| find_executable("python3", &[]))
+            .or_else(|| find_executable("py", &[]))
+    } else {
+        find_executable(
+            "python3",
+            &[
+                "/opt/homebrew/bin/python3",
+                "/usr/local/bin/python3",
+                "/usr/bin/python3",
+            ],
+        )
+    }
     .ok_or_else(|| "python3 is required to start the local analyzer.".to_string())?;
     let python_path = repo_root.join("services/analyzer/src");
     let (log_path, stdout, stderr) = service_stdio("analyzer")?;
 
-    let child = Command::new(python)
+    let mut command = Command::new(&python);
+    command
         .current_dir(repo_root)
         .env("PYTHONPATH", python_path)
-        .env("PATH", command_path())
+        .env("PATH", command_path());
+    if cfg!(target_os = "windows")
+        && python
+            .file_stem()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.eq_ignore_ascii_case("py"))
+    {
+        command.arg("-3");
+    }
+    let child = command
         .arg("-m")
         .arg("vaexcore_pulse_analyzer.server")
         .stdin(Stdio::null())
@@ -1089,6 +1268,7 @@ fn spawn_api_bridge(repo_root: &Path) -> Result<SpawnedLocalService, String> {
     let node = find_executable(
         "node",
         &[
+            "C:\\Program Files\\nodejs\\node.exe",
             "/opt/homebrew/opt/node@22/bin/node",
             "/opt/homebrew/opt/node/bin/node",
             "/opt/homebrew/bin/node",
@@ -1153,11 +1333,14 @@ fn resolve_repo_root() -> Result<PathBuf, String> {
 }
 
 fn find_executable(name: &str, fallback_paths: &[&str]) -> Option<PathBuf> {
+    let names = executable_names(name);
     if let Some(paths) = env::var_os("PATH") {
         for directory in env::split_paths(&paths) {
-            let candidate = directory.join(name);
-            if candidate.exists() {
-                return Some(candidate);
+            for executable_name in &names {
+                let candidate = directory.join(executable_name);
+                if candidate.exists() {
+                    return Some(candidate);
+                }
             }
         }
     }
@@ -1168,11 +1351,23 @@ fn find_executable(name: &str, fallback_paths: &[&str]) -> Option<PathBuf> {
         .find(|candidate| candidate.exists())
 }
 
+fn executable_names(name: &str) -> Vec<String> {
+    if cfg!(target_os = "windows") && !name.to_ascii_lowercase().ends_with(".exe") {
+        vec![format!("{name}.exe"), name.to_string()]
+    } else {
+        vec![name.to_string()]
+    }
+}
+
 fn command_path() -> String {
     let current_path = env::var("PATH").unwrap_or_default();
-    format!(
-        "/opt/homebrew/opt/node@22/bin:/opt/homebrew/opt/node/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:{current_path}"
-    )
+    if cfg!(target_os = "windows") {
+        format!("C:\\Program Files\\nodejs;C:\\Python312;C:\\Python311;{current_path}")
+    } else {
+        format!(
+            "/opt/homebrew/opt/node@22/bin:/opt/homebrew/opt/node/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:{current_path}"
+        )
+    }
 }
 
 fn port_is_open(port: u16) -> bool {
@@ -1181,38 +1376,68 @@ fn port_is_open(port: u16) -> bool {
 }
 
 fn stop_port_listener(port: u16) {
-    let lsof = find_executable("lsof", &["/usr/sbin/lsof", "/usr/bin/lsof"])
-        .unwrap_or_else(|| PathBuf::from("/usr/sbin/lsof"));
-    let Ok(output) = Command::new(lsof)
-        .args(["-nP", &format!("-tiTCP:{port}"), "-sTCP:LISTEN"])
-        .output()
-    else {
-        return;
-    };
-
-    if !output.status.success() {
-        return;
-    }
-
-    let pids = String::from_utf8_lossy(&output.stdout)
-        .lines()
-        .map(str::trim)
-        .filter(|pid| !pid.is_empty() && pid.chars().all(|character| character.is_ascii_digit()))
-        .map(str::to_string)
-        .collect::<Vec<_>>();
-
-    for pid in pids {
-        let _ = Command::new("/bin/kill").args(["-TERM", &pid]).output();
-    }
-
-    let started_at = SystemTime::now();
-    while port_is_open(port)
-        && started_at
-            .elapsed()
-            .unwrap_or_else(|_| Duration::from_secs(0))
-            < Duration::from_secs(2)
+    #[cfg(target_os = "windows")]
     {
-        thread::sleep(Duration::from_millis(100));
+        let Ok(output) = Command::new("netstat").args(["-ano", "-p", "tcp"]).output() else {
+            return;
+        };
+        if !output.status.success() {
+            return;
+        }
+        let needle = format!(":{port}");
+        let pids = String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .filter(|line| line.contains(&needle) && line.contains("LISTENING"))
+            .filter_map(|line| line.split_whitespace().last())
+            .filter(|pid| pid.chars().all(|character| character.is_ascii_digit()))
+            .map(str::to_string)
+            .collect::<Vec<_>>();
+
+        for pid in pids {
+            let _ = Command::new("taskkill")
+                .args(["/PID", &pid, "/T", "/F"])
+                .output();
+        }
+        return;
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let lsof = find_executable("lsof", &["/usr/sbin/lsof", "/usr/bin/lsof"])
+            .unwrap_or_else(|| PathBuf::from("/usr/sbin/lsof"));
+        let Ok(output) = Command::new(lsof)
+            .args(["-nP", &format!("-tiTCP:{port}"), "-sTCP:LISTEN"])
+            .output()
+        else {
+            return;
+        };
+
+        if !output.status.success() {
+            return;
+        }
+
+        let pids = String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .map(str::trim)
+            .filter(|pid| {
+                !pid.is_empty() && pid.chars().all(|character| character.is_ascii_digit())
+            })
+            .map(str::to_string)
+            .collect::<Vec<_>>();
+
+        for pid in pids {
+            let _ = Command::new("/bin/kill").args(["-TERM", &pid]).output();
+        }
+
+        let started_at = SystemTime::now();
+        while port_is_open(port)
+            && started_at
+                .elapsed()
+                .unwrap_or_else(|_| Duration::from_secs(0))
+                < Duration::from_secs(2)
+        {
+            thread::sleep(Duration::from_millis(100));
+        }
     }
 }
 
@@ -1285,14 +1510,7 @@ fn service_stdio(service_name: &str) -> Result<(PathBuf, Stdio, Stdio), String> 
 }
 
 fn pulse_log_dir() -> PathBuf {
-    env::var("HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| env::temp_dir())
-        .join("Library")
-        .join("Application Support")
-        .join("vaexcore")
-        .join("pulse")
-        .join("logs")
+    vaexcore_shared_data_dir().join("pulse").join("logs")
 }
 
 fn show_main_window<R: Runtime>(app: &tauri::AppHandle<R>) -> Result<(), String> {
@@ -1355,34 +1573,36 @@ fn studio_api_discovery() -> StudioApiDiscovery {
         };
     }
 
-    let discovery_path = studio_discovery_file_path();
-    if let Ok(raw) = fs::read_to_string(&discovery_path) {
-        if let Ok(document) = serde_json::from_str::<serde_json::Value>(&raw) {
-            let api_url = document
-                .get("apiUrl")
-                .or_else(|| document.get("api_url"))
-                .and_then(|value| value.as_str())
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(ToOwned::to_owned);
-            let ws_url = document
-                .get("wsUrl")
-                .or_else(|| document.get("ws_url"))
-                .and_then(|value| value.as_str())
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(ToOwned::to_owned);
+    for discovery_path in studio_discovery_file_paths() {
+        if let Ok(raw) = fs::read_to_string(&discovery_path) {
+            if let Ok(document) = serde_json::from_str::<serde_json::Value>(&raw) {
+                let api_url = document
+                    .get("apiUrl")
+                    .or_else(|| document.get("api_url"))
+                    .and_then(|value| value.as_str())
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(ToOwned::to_owned);
+                let ws_url = document
+                    .get("wsUrl")
+                    .or_else(|| document.get("ws_url"))
+                    .and_then(|value| value.as_str())
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(ToOwned::to_owned);
 
-            if let Some(api_url) = api_url {
-                return StudioApiDiscovery {
-                    ws_url: configured_ws_url
-                        .unwrap_or_else(|| ws_url.unwrap_or_else(|| ws_url_from_api_url(&api_url))),
-                    api_url,
-                    token,
-                    discovered: true,
-                    source: "discovery_file".to_string(),
-                    detail: format!("Loaded {}.", discovery_path.display()),
-                };
+                if let Some(api_url) = api_url {
+                    return StudioApiDiscovery {
+                        ws_url: configured_ws_url.unwrap_or_else(|| {
+                            ws_url.unwrap_or_else(|| ws_url_from_api_url(&api_url))
+                        }),
+                        api_url,
+                        token,
+                        discovered: true,
+                        source: "discovery_file".to_string(),
+                        detail: format!("Loaded {}.", discovery_path.display()),
+                    };
+                }
             }
         }
     }
@@ -1398,13 +1618,11 @@ fn studio_api_discovery() -> StudioApiDiscovery {
     }
 }
 
-fn studio_discovery_file_path() -> PathBuf {
-    let home = env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(home)
-        .join("Library")
-        .join("Application Support")
-        .join("vaexcore studio")
-        .join("api-discovery.json")
+fn studio_discovery_file_paths() -> Vec<PathBuf> {
+    vec![
+        app_data_dir_for("com.vaexcore.studio").join("api-discovery.json"),
+        app_data_dir_for("vaexcore studio").join("api-discovery.json"),
+    ]
 }
 
 fn ws_url_from_api_url(api_url: &str) -> String {
@@ -1744,10 +1962,25 @@ fn open_media_in_quicktime(
         return Err(format!("File not found: {}", media_path));
     }
 
-    let normalized_seconds = start_seconds.unwrap_or(0.0).max(0.0);
-    let escaped_path = media_path.replace('\\', "\\\\").replace('"', "\\\"");
-    let apple_script = format!(
-        r#"
+    #[cfg(target_os = "windows")]
+    {
+        let status = Command::new("cmd")
+            .args(["/C", "start", "", &media_path])
+            .status()
+            .map_err(|error| format!("Could not open this file with the Windows shell: {error}"))?;
+        return if status.success() {
+            Ok("Opened this file with the default Windows media app. Timestamp seeking is not automatic on Windows yet.".to_string())
+        } else {
+            Err("Could not open this file with the default Windows media app.".to_string())
+        };
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let normalized_seconds = start_seconds.unwrap_or(0.0).max(0.0);
+        let escaped_path = media_path.replace('\\', "\\\\").replace('"', "\\\"");
+        let apple_script = format!(
+            r#"
 set targetFile to POSIX file "{escaped_path}"
 set targetTime to {normalized_seconds}
 tell application "QuickTime Player"
@@ -1763,37 +1996,38 @@ tell application "QuickTime Player"
   end repeat
 end tell
 "#,
-    );
+        );
 
-    let script_status = Command::new("osascript")
-        .arg("-e")
-        .arg(apple_script)
-        .output();
+        let script_status = Command::new("osascript")
+            .arg("-e")
+            .arg(apple_script)
+            .output();
 
-    match script_status {
-        Ok(output) if output.status.success() => {
-            Ok("Opened this file in QuickTime and jumped to the requested moment.".to_string())
-        }
-        Ok(output) => {
-            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-            let fallback = Command::new("open")
-                .args(["-a", "QuickTime Player", &media_path])
-                .status()
-                .map_err(|error| error.to_string())?;
-            if fallback.success() {
-                if stderr.is_empty() {
-                    Ok("Opened this file in QuickTime, but could not jump to the exact timestamp automatically.".to_string())
-                } else {
-                    Ok(format!(
+        match script_status {
+            Ok(output) if output.status.success() => {
+                Ok("Opened this file in QuickTime and jumped to the requested moment.".to_string())
+            }
+            Ok(output) => {
+                let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+                let fallback = Command::new("open")
+                    .args(["-a", "QuickTime Player", &media_path])
+                    .status()
+                    .map_err(|error| error.to_string())?;
+                if fallback.success() {
+                    if stderr.is_empty() {
+                        Ok("Opened this file in QuickTime, but could not jump to the exact timestamp automatically.".to_string())
+                    } else {
+                        Ok(format!(
                         "Opened this file in QuickTime, but could not jump to the exact timestamp automatically: {}",
                         stderr
                     ))
+                    }
+                } else {
+                    Err("Could not open this file in QuickTime.".to_string())
                 }
-            } else {
-                Err("Could not open this file in QuickTime.".to_string())
             }
+            Err(error) => Err(format!("Could not open QuickTime: {}", error)),
         }
-        Err(error) => Err(format!("Could not open QuickTime: {}", error)),
     }
 }
 

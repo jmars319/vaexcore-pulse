@@ -22,6 +22,7 @@
     "build:desktop": "pnpm --filter @vaexcore/pulse-desktopapp build:desktop",
     "build:api": "pnpm --filter @vaexcore/pulse-api build",
     "app:build": "bash ./scripts/app-build.sh",
+    "app:build:windows": "pnpm --filter @vaexcore/pulse-desktopapp exec tauri build --bundles nsis",
     "app:zip": "bash ./scripts/app-zip.sh",
     "release:check": "bash ./scripts/release-check.sh",
     "release:unsigned": "bash ./scripts/release-unsigned.sh",

@@ -365,9 +365,9 @@ describe("domain helpers", () => {
     );
     assert.equal(
       lowSignalDescription.summary,
-      "Low confidence - low activity, unclear payoff",
+      "Low confidence: low activity, unclear payoff",
     );
-    assert.equal(lowSignalDescription.detail, "Weak supporting signals.");
+    assert.equal(lowSignalDescription.detail, "Not enough signs to be confident.");
     assert.equal(
       describeReasonCodePlainly("STRUCTURE_RESOLUTION"),
       "event appears to resolve",
@@ -393,7 +393,7 @@ describe("domain helpers", () => {
         },
         1,
       ),
-      "Low signal density",
+      "Only a few possible moments found",
     );
     assert.equal(
       summarizeSessionQuality(
@@ -403,7 +403,7 @@ describe("domain helpers", () => {
         },
         4,
       ),
-      "Strong activity detected in multiple regions",
+      "Several clear moments found",
     );
   });
 });
