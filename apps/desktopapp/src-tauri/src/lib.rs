@@ -33,6 +33,7 @@ const ANALYZER_PORT: u16 = 9010;
 const API_PORT: u16 = 4010;
 const SUITE_DISCOVERY_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(15);
 const PULSE_HANDOFF_STALE_AFTER: Duration = Duration::from_secs(24 * 60 * 60);
+const SUITE_COMMAND_STALE_AFTER: Duration = Duration::from_secs(24 * 60 * 60);
 
 #[derive(Default)]
 struct ManagedLocalServices {
@@ -485,6 +486,13 @@ fn append_suite_timeline(input: SuiteTimelineInput) -> Result<(), String> {
 #[tauri::command]
 fn consume_pulse_recording_handoff() -> Option<PulseRecordingHandoffDocument> {
     let path = suite_handoff_dir().join(PULSE_RECORDING_INTAKE_FILE);
+    consume_pulse_recording_handoff_file(&path, true)
+}
+
+fn consume_pulse_recording_handoff_file(
+    path: &Path,
+    append_timeline: bool,
+) -> Option<PulseRecordingHandoffDocument> {
     let contents = fs::read(&path).ok()?;
     let handoff = serde_json::from_slice::<PulseRecordingHandoffDocument>(&contents).ok()?;
     if let Err(error) = validate_pulse_recording_handoff(&handoff, &path) {
@@ -493,20 +501,22 @@ fn consume_pulse_recording_handoff() -> Option<PulseRecordingHandoffDocument> {
         return None;
     }
     let _ = fs::remove_file(path);
-    if let Err(error) = append_suite_timeline_event(
-        "recording.handoff",
-        "Pulse received recording",
-        &format!(
-            "{} sent {} for review.",
-            handoff.source_app_name, handoff.recording.output_path
-        ),
-        serde_json::json!({
-            "requestId": handoff.request_id,
-            "sessionId": handoff.recording.session_id,
-            "outputPath": handoff.recording.output_path,
-        }),
-    ) {
-        eprintln!("Unable to append vaexcore pulse suite timeline event: {error}");
+    if append_timeline {
+        if let Err(error) = append_suite_timeline_event(
+            "recording.handoff",
+            "Pulse received recording",
+            &format!(
+                "{} sent {} for review.",
+                handoff.source_app_name, handoff.recording.output_path
+            ),
+            serde_json::json!({
+                "requestId": handoff.request_id,
+                "sessionId": handoff.recording.session_id,
+                "outputPath": handoff.recording.output_path,
+            }),
+        ) {
+            eprintln!("Unable to append vaexcore pulse suite timeline event: {error}");
+        }
     }
     Some(handoff)
 }
@@ -593,6 +603,13 @@ fn looks_like_rfc3339_timestamp(value: &str) -> bool {
 #[tauri::command]
 fn consume_suite_commands() -> Vec<SuiteCommandDocument> {
     let directory = suite_command_dir().join(PULSE_APP_ID);
+    consume_suite_commands_from_dir(&directory, true)
+}
+
+fn consume_suite_commands_from_dir(
+    directory: &Path,
+    append_timeline: bool,
+) -> Vec<SuiteCommandDocument> {
     let Ok(entries) = fs::read_dir(&directory) else {
         return Vec::new();
     };
@@ -603,27 +620,81 @@ fn consume_suite_commands() -> Vec<SuiteCommandDocument> {
             let path = entry.path();
             let contents = fs::read(&path).ok()?;
             let command = serde_json::from_slice::<SuiteCommandDocument>(&contents).ok()?;
+            if let Err(error) = validate_suite_command(&command, &path) {
+                eprintln!("Ignoring invalid vaexcore pulse suite command: {error}");
+                let _ = fs::remove_file(path);
+                return None;
+            }
             let _ = fs::remove_file(path);
-            if let Err(error) = append_suite_timeline_event(
-                "suite.command",
-                "Pulse consumed suite command",
-                &format!(
-                    "Handled {} from {}.",
-                    command.command, command.source_app_name
-                ),
-                serde_json::json!({
-                    "commandId": command.command_id,
-                    "command": command.command,
-                    "sourceApp": command.source_app,
-                }),
-            ) {
-                eprintln!("Unable to append vaexcore pulse suite timeline event: {error}");
+            if append_timeline {
+                if let Err(error) = append_suite_timeline_event(
+                    "suite.command",
+                    "Pulse consumed suite command",
+                    &format!(
+                        "Handled {} from {}.",
+                        command.command, command.source_app_name
+                    ),
+                    serde_json::json!({
+                        "commandId": command.command_id,
+                        "command": command.command,
+                        "sourceApp": command.source_app,
+                    }),
+                ) {
+                    eprintln!("Unable to append vaexcore pulse suite timeline event: {error}");
+                }
             }
             Some(command)
         })
         .collect::<Vec<_>>();
     commands.sort_by(|left, right| left.requested_at.cmp(&right.requested_at));
     commands
+}
+
+fn validate_suite_command(command: &SuiteCommandDocument, path: &Path) -> Result<(), String> {
+    let file_age = fs::metadata(path)
+        .and_then(|metadata| metadata.modified())
+        .ok()
+        .and_then(|modified| SystemTime::now().duration_since(modified).ok());
+    validate_suite_command_document(command, file_age)
+}
+
+fn validate_suite_command_document(
+    command: &SuiteCommandDocument,
+    file_age: Option<Duration>,
+) -> Result<(), String> {
+    if command.schema_version != SUITE_DISCOVERY_SCHEMA_VERSION {
+        return Err(format!(
+            "expected schema version {}, got {}",
+            SUITE_DISCOVERY_SCHEMA_VERSION, command.schema_version
+        ));
+    }
+    if command.target_app != PULSE_APP_ID {
+        return Err(format!("unexpected target app {}", command.target_app));
+    }
+    if !suite_app_definitions()
+        .iter()
+        .any(|definition| definition.app_id == command.source_app)
+    {
+        return Err(format!("unknown source app {}", command.source_app));
+    }
+    if command.command_id.trim().is_empty() {
+        return Err("commandId is required".to_string());
+    }
+    if command.command.trim().is_empty() {
+        return Err("command is required".to_string());
+    }
+    if !looks_like_rfc3339_timestamp(&command.requested_at) {
+        return Err("requestedAt must be an RFC3339-like timestamp".to_string());
+    }
+    if !command.payload.is_object() {
+        return Err("payload must be an object".to_string());
+    }
+    if let Some(age) = file_age {
+        if age > SUITE_COMMAND_STALE_AFTER {
+            return Err(format!("command file is stale: {}s old", age.as_secs()));
+        }
+    }
+    Ok(())
 }
 
 fn launch_desktop_app(app_name: &str) -> SuiteLaunchResult {
@@ -2298,6 +2369,97 @@ mod tests {
             .contains("startedAt"));
     }
 
+    #[test]
+    fn suite_command_validation_rejects_non_object_payload() {
+        let mut command = valid_suite_command();
+        command.payload = serde_json::json!("bad-payload");
+
+        assert!(validate_suite_command_document(&command, None)
+            .unwrap_err()
+            .contains("payload"));
+    }
+
+    #[test]
+    fn suite_command_validation_rejects_wrong_target_app() {
+        let mut command = valid_suite_command();
+        command.target_app = "vaexcore-console".to_string();
+
+        assert!(validate_suite_command_document(&command, None)
+            .unwrap_err()
+            .contains("target app"));
+    }
+
+    #[test]
+    fn suite_command_validation_rejects_stale_files() {
+        let command = valid_suite_command();
+
+        assert!(validate_suite_command_document(
+            &command,
+            Some(SUITE_COMMAND_STALE_AFTER + Duration::from_secs(1)),
+        )
+        .unwrap_err()
+        .contains("stale"));
+    }
+
+    #[test]
+    fn suite_command_consume_removes_valid_and_invalid_schema_files() {
+        let directory = temp_test_dir("suite-command-consume");
+        let valid_path = directory.join("valid.json");
+        let invalid_path = directory.join("invalid.json");
+        fs::write(
+            &valid_path,
+            serde_json::to_vec_pretty(&valid_suite_command()).unwrap(),
+        )
+        .unwrap();
+        let mut invalid = valid_suite_command();
+        invalid.target_app = "vaexcore-console".to_string();
+        fs::write(&invalid_path, serde_json::to_vec_pretty(&invalid).unwrap()).unwrap();
+
+        let commands = consume_suite_commands_from_dir(&directory, false);
+
+        assert_eq!(commands.len(), 1);
+        assert!(!valid_path.exists());
+        assert!(!invalid_path.exists());
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn suite_command_consume_retains_malformed_json_files() {
+        let directory = temp_test_dir("suite-command-malformed");
+        let malformed_path = directory.join("malformed.json");
+        fs::write(&malformed_path, "{bad json").unwrap();
+
+        assert!(consume_suite_commands_from_dir(&directory, false).is_empty());
+        assert!(malformed_path.exists());
+
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn handoff_consume_removes_valid_files() {
+        let directory = temp_test_dir("handoff-valid");
+        let path = directory.join(PULSE_RECORDING_INTAKE_FILE);
+        fs::write(&path, serde_json::to_vec_pretty(&valid_handoff()).unwrap()).unwrap();
+
+        let handoff = consume_pulse_recording_handoff_file(&path, false);
+
+        assert!(handoff.is_some());
+        assert!(!path.exists());
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn handoff_consume_retains_malformed_json_files() {
+        let directory = temp_test_dir("handoff-malformed");
+        let path = directory.join(PULSE_RECORDING_INTAKE_FILE);
+        fs::write(&path, "{bad json").unwrap();
+
+        assert!(consume_pulse_recording_handoff_file(&path, false).is_none());
+        assert!(path.exists());
+
+        let _ = fs::remove_dir_all(directory);
+    }
+
     fn valid_handoff() -> PulseRecordingHandoffDocument {
         PulseRecordingHandoffDocument {
             schema_version: SUITE_DISCOVERY_SCHEMA_VERSION,
@@ -2314,6 +2476,29 @@ mod tests {
                 stopped_at: "2026-05-06T12:05:00Z".to_string(),
             },
         }
+    }
+
+    fn valid_suite_command() -> SuiteCommandDocument {
+        SuiteCommandDocument {
+            schema_version: SUITE_DISCOVERY_SCHEMA_VERSION,
+            command_id: "open-review-1".to_string(),
+            source_app: STUDIO_APP_ID.to_string(),
+            source_app_name: "vaexcore studio".to_string(),
+            target_app: PULSE_APP_ID.to_string(),
+            command: "open-review".to_string(),
+            requested_at: "2026-05-06T12:00:00Z".to_string(),
+            payload: serde_json::json!({ "recordingSessionId": "rec_smoke" }),
+        }
+    }
+
+    fn temp_test_dir(name: &str) -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!("vaexcore-pulse-{name}-{nanos}"));
+        fs::create_dir_all(&directory).unwrap();
+        directory
     }
 
     fn valid_discovery() -> SuiteDiscoveryDocument {
