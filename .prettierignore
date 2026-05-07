@@ -7,3 +7,4 @@ apps/desktopapp/src-tauri/icons
 services/api/dist
 .local
 docs/archive
+rust-toolchain.toml

@@ -9,7 +9,7 @@
   },
   "scripts": {
     "bootstrap": "bash ./scripts/bootstrap.sh",
-    "ci": "pnpm run lint && pnpm build:service-bundle && pnpm run typecheck && pnpm test && pnpm run smoke:studio && (cd apps/desktopapp/src-tauri && cargo fmt --all -- --check && cargo clippy --all-targets -- -D warnings && cargo test)",
+    "ci": "pnpm run lint && pnpm build:service-bundle && pnpm run check:service-bundle && pnpm run typecheck && pnpm test && pnpm run smoke:studio && (cd apps/desktopapp/src-tauri && cargo fmt --all -- --check && cargo clippy --all-targets -- -D warnings && cargo test)",
     "check:env": "bash ./scripts/check-env.sh",
     "check:packages": "bash ./scripts/check-packages.sh",
     "dev:web": "bash ./scripts/dev-web.sh",
@@ -23,6 +23,7 @@
     "build:desktop": "pnpm --filter @vaexcore/pulse-desktopapp build:desktop",
     "build:api": "pnpm --filter @vaexcore/pulse-api build",
     "build:service-bundle": "node scripts/build-service-bundle.mjs",
+    "check:service-bundle": "node scripts/check-service-bundle.mjs",
     "app:build": "bash ./scripts/app-build.sh",
     "app:build:windows": "pnpm --filter @vaexcore/pulse-desktopapp exec tauri build --bundles nsis",
     "app:dist:windows": "pnpm app:build:windows",

@@ -12,16 +12,29 @@ concurrency:
 jobs:
   test:
     runs-on: macos-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: "22"
-      - run: rustup default stable
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/git
+            ~/.cargo/registry
+            apps/desktopapp/src-tauri/target
+          key: ${{ runner.os }}-pulse-cargo-${{ hashFiles('apps/desktopapp/src-tauri/Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pulse-cargo-
+      - run: rustup show
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
       - run: pnpm run lint
       - run: pnpm build:service-bundle
+      - run: pnpm run check:service-bundle
       - run: pnpm run typecheck
       - run: pnpm test
       - run: pnpm run smoke:studio
