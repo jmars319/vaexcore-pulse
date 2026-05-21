@@ -12,14 +12,19 @@ import { createMockProjectSession } from "@vaexcore/pulse-shared-types/testing";
 import {
   canImportStudioRecording,
   enqueueStudioRecording,
+  markStudioRecordingExported,
   markStudioIntakePersistence,
+  parseStudioExportHistory,
   parseStudioIntakePersistence,
   restoreStudioIntakePersistence,
+  serializeStudioExportHistory,
   serializeStudioIntakePersistence,
   studioIntakePersistenceSets,
+  studioRecordingImportBlockReason,
   studioRecordingFromHistoryEntry,
   studioRecordingFromMessage,
   studioRecordingQueueKey,
+  studioRecordingWarning,
 } from "../apps/desktopapp/src/lib/studioIntegration.ts";
 
 const generatedAt = "2026-05-21T03:20:00.000Z";
@@ -236,6 +241,7 @@ assert.equal(
   validHandoff.recording.verificationState,
 );
 assert.equal(canImportStudioRecording(intakeQueue[0]), true);
+assert.equal(studioRecordingWarning(intakeQueue[0]), null);
 assert.equal(
   enqueueStudioRecording(intakeQueue, historyRecording, {
     source: "history",
@@ -272,6 +278,25 @@ const unusableQueue = enqueueStudioRecording([], unusableRecording, {
 });
 assert.equal(unusableQueue[0]?.state, "unusable");
 assert.equal(canImportStudioRecording(unusableQueue[0]), false);
+assert.equal(
+  studioRecordingImportBlockReason(unusableQueue[0]),
+  "Studio marked this recording as failed.",
+);
+
+const basicVerifiedQueue = enqueueStudioRecording(
+  [],
+  {
+    ...historyRecording!,
+    verificationState: "basic_verified",
+    verificationDetail: "File exists and has bytes; ffprobe is unavailable.",
+  },
+  {
+    source: "history",
+    receivedAt: generatedAt,
+  },
+);
+assert.equal(canImportStudioRecording(basicVerifiedQueue[0]), true);
+assert.match(studioRecordingWarning(basicVerifiedQueue[0]) ?? "", /basic/i);
 
 const persistenceKey = studioRecordingQueueKey(historyRecording);
 let persistence = parseStudioIntakePersistence(null);
@@ -299,6 +324,23 @@ assert.deepEqual(
   parseStudioIntakePersistence(serializeStudioIntakePersistence(persistence)),
   persistence,
 );
+
+const exportHistory = markStudioRecordingExported(
+  parseStudioExportHistory(null),
+  persistenceKey,
+  {
+    exportedAt: generatedAt,
+    formats: ["timestamps", "json", "edl"],
+    acceptedCount: 1,
+    pulseSessionId: "session_studio_handoff_smoke",
+    pulseSessionTitle: "Studio Source-Aware Recording Review",
+  },
+);
+assert.deepEqual(
+  parseStudioExportHistory(serializeStudioExportHistory(exportHistory)),
+  exportHistory,
+);
+assert.equal(exportHistory.recordings[persistenceKey]?.acceptedCount, 1);
 
 const baseSession = createMockProjectSession();
 const acceptedDecision = makeReviewDecision(

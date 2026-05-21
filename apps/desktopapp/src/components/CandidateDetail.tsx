@@ -57,6 +57,13 @@ type CandidateDetailProps = {
   isExportingToStudio: boolean;
   isSavingReview: boolean;
   reviewError: string | null;
+  studioRecordingExportHistory: {
+    exportedAt: string;
+    formats: string[];
+    acceptedCount: number;
+    pulseSessionId: string;
+    pulseSessionTitle: string;
+  } | null;
   studioExportStatus: string | null;
 };
 
@@ -96,6 +103,7 @@ export function CandidateDetail({
   isExportingToStudio,
   isSavingReview,
   reviewError,
+  studioRecordingExportHistory,
   studioExportStatus,
 }: CandidateDetailProps) {
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
@@ -472,6 +480,18 @@ export function CandidateDetail({
               ) : null}
               {studioExportStatus ? (
                 <p className="review-status-copy">{studioExportStatus}</p>
+              ) : null}
+              {studioRecordingExportHistory ? (
+                <p className="review-status-copy">
+                  Last Studio export:{" "}
+                  {studioRecordingExportHistory.acceptedCount} kept moments as{" "}
+                  {studioRecordingExportHistory.formats.join(", ")} on{" "}
+                  {new Date(
+                    studioRecordingExportHistory.exportedAt,
+                  ).toLocaleString()}
+                  . Use the copy buttons above to re-export the current accepted
+                  set.
+                </p>
               ) : null}
               {isCurrentCandidateSentToStudio ? (
                 <p className="review-status-copy">

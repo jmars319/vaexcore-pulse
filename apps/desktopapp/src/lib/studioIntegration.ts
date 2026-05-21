@@ -98,6 +98,21 @@ export type StudioIntakePersistence = {
 };
 
 export const STUDIO_INTAKE_STORAGE_KEY = "vaexcore:pulse:studio-intake:v1";
+export const STUDIO_EXPORT_HISTORY_STORAGE_KEY =
+  "vaexcore:pulse:studio-export-history:v1";
+
+export type StudioRecordingExportHistoryEntry = {
+  exportedAt: string;
+  formats: Array<"timestamps" | "json" | "edl">;
+  acceptedCount: number;
+  pulseSessionId: string;
+  pulseSessionTitle: string;
+};
+
+export type StudioRecordingExportHistory = {
+  schemaVersion: 1;
+  recordings: Record<string, StudioRecordingExportHistoryEntry>;
+};
 
 type StudioRecentRecordingsSnapshot = {
   recordings?: unknown;
@@ -412,6 +427,51 @@ export function canImportStudioRecording(item: StudioIntakeQueueItem): boolean {
   );
 }
 
+export function studioRecordingImportBlockReason(
+  item: StudioIntakeQueueItem,
+): string | null {
+  if (canImportStudioRecording(item)) {
+    return null;
+  }
+  if (item.state === "already-consumed") {
+    return "This recording is already imported into Pulse.";
+  }
+  if (item.state === "already-exported") {
+    return "This recording already has exported review results.";
+  }
+  if (item.state === "dismissed") {
+    return "Restore this recording before importing it.";
+  }
+  if (item.state === "malformed") {
+    return "Pulse could not parse the Studio handoff.";
+  }
+  if (item.completionState === "failed") {
+    return "Studio marked this recording as failed.";
+  }
+  if (item.verificationState === "missing") {
+    return "The recording file is missing.";
+  }
+  if (item.verificationState === "empty") {
+    return "The recording file is empty.";
+  }
+  if (item.verificationState === "unreadable") {
+    return "The recording file could not be read.";
+  }
+  return item.detail;
+}
+
+export function studioRecordingWarning(
+  item: StudioIntakeQueueItem,
+): string | null {
+  if (item.verificationState === "basic_verified") {
+    return "Only basic file verification is available; import is allowed.";
+  }
+  if (!item.completionState || !item.verificationState) {
+    return "Legacy Studio handoff has limited recording metadata.";
+  }
+  return null;
+}
+
 export function isStudioRecordingUnusable(
   candidate: StudioRecordingCandidate,
 ): boolean {
@@ -547,6 +607,88 @@ export function restoreStudioIntakePersistence(
   return {
     ...persistence,
     dismissed,
+  };
+}
+
+export function createEmptyStudioExportHistory(): StudioRecordingExportHistory {
+  return {
+    schemaVersion: 1,
+    recordings: {},
+  };
+}
+
+export function parseStudioExportHistory(
+  raw: string | null,
+): StudioRecordingExportHistory {
+  if (!raw) {
+    return createEmptyStudioExportHistory();
+  }
+  try {
+    const parsed = JSON.parse(raw) as Partial<StudioRecordingExportHistory>;
+    if (parsed.schemaVersion !== 1 || !parsed.recordings) {
+      return createEmptyStudioExportHistory();
+    }
+    return {
+      schemaVersion: 1,
+      recordings: Object.fromEntries(
+        Object.entries(parsed.recordings).flatMap(([key, value]) => {
+          const entry = sanitizeExportHistoryEntry(value);
+          return entry ? [[key, entry]] : [];
+        }),
+      ),
+    };
+  } catch {
+    return createEmptyStudioExportHistory();
+  }
+}
+
+export function serializeStudioExportHistory(
+  history: StudioRecordingExportHistory,
+): string {
+  return JSON.stringify(history);
+}
+
+export function markStudioRecordingExported(
+  history: StudioRecordingExportHistory,
+  key: string,
+  entry: StudioRecordingExportHistoryEntry,
+): StudioRecordingExportHistory {
+  return {
+    ...history,
+    recordings: {
+      ...history.recordings,
+      [key]: entry,
+    },
+  };
+}
+
+function sanitizeExportHistoryEntry(
+  value: unknown,
+): StudioRecordingExportHistoryEntry | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const record = value as Partial<StudioRecordingExportHistoryEntry>;
+  const formats = Array.isArray(record.formats)
+    ? record.formats.filter(
+        (format): format is "timestamps" | "json" | "edl" =>
+          format === "timestamps" || format === "json" || format === "edl",
+      )
+    : [];
+  if (
+    typeof record.exportedAt !== "string" ||
+    typeof record.pulseSessionId !== "string" ||
+    typeof record.pulseSessionTitle !== "string" ||
+    typeof record.acceptedCount !== "number"
+  ) {
+    return null;
+  }
+  return {
+    exportedAt: record.exportedAt,
+    formats,
+    acceptedCount: record.acceptedCount,
+    pulseSessionId: record.pulseSessionId,
+    pulseSessionTitle: record.pulseSessionTitle,
   };
 }
 

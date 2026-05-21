@@ -105,16 +105,23 @@ import {
   enqueueStudioRecording,
   fetchLatestStudioRecording,
   markStudioIntakePersistence,
+  markStudioRecordingExported,
   markStudioRecordingQueueItem,
+  parseStudioExportHistory,
   parseStudioIntakePersistence,
   restoreStudioIntakePersistence,
+  serializeStudioExportHistory,
   serializeStudioIntakePersistence,
+  STUDIO_EXPORT_HISTORY_STORAGE_KEY,
   STUDIO_INTAKE_STORAGE_KEY,
   studioIntakePersistenceSets,
   studioEventSocketUrl,
+  studioRecordingImportBlockReason,
   studioRecordingFromMessage,
   studioRecordingQueueKey,
+  studioRecordingWarning,
   studioRequestHeaders,
+  type StudioRecordingExportHistory,
   type StudioIntakePersistence,
   type StudioDiscovery,
   type StudioIntakeState,
@@ -398,6 +405,21 @@ function filterStudioIntakeRecordings(
   });
 }
 
+function buildStudioIntakeFilterCounts(
+  recordings: StudioIntakeQueueItem[],
+): Record<StudioIntakeFilter, number> {
+  return {
+    ready: filterStudioIntakeRecordings(recordings, "ready").length,
+    "needs-attention": filterStudioIntakeRecordings(
+      recordings,
+      "needs-attention",
+    ).length,
+    imported: filterStudioIntakeRecordings(recordings, "imported").length,
+    exported: filterStudioIntakeRecordings(recordings, "exported").length,
+    hidden: filterStudioIntakeRecordings(recordings, "hidden").length,
+  };
+}
+
 function formatByteCount(value: number): string {
   if (value < 1024) return `${value} B`;
   if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
@@ -553,6 +575,8 @@ function DesktopApp() {
     useState<StudioIntakeFilter>("ready");
   const [studioIntakePersistence, setStudioIntakePersistence] =
     useState<StudioIntakePersistence>(() => loadStudioIntakePersistence());
+  const [studioExportHistory, setStudioExportHistory] =
+    useState<StudioRecordingExportHistory>(() => loadStudioExportHistory());
   const [studioExportStatus, setStudioExportStatus] = useState<string | null>(
     null,
   );
@@ -784,6 +808,10 @@ function DesktopApp() {
       filterStudioIntakeRecordings(studioIntake.recordings, studioIntakeFilter),
     [studioIntake.recordings, studioIntakeFilter],
   );
+  const studioIntakeFilterCounts = useMemo(
+    () => buildStudioIntakeFilterCounts(studioIntake.recordings),
+    [studioIntake.recordings],
+  );
 
   const timestampPreview = projectSession
     ? toTimestampExport(
@@ -806,6 +834,20 @@ function DesktopApp() {
         Object.values(decisionsByCandidateId),
       )
     : "";
+  const activeStudioRecordingKey = useMemo(() => {
+    if (
+      !projectSession ||
+      !studioIntake.latestRecording ||
+      studioIntake.latestRecording.outputPath !==
+        projectSession.mediaSource.path
+    ) {
+      return null;
+    }
+    return studioRecordingQueueKey(studioIntake.latestRecording);
+  }, [projectSession, studioIntake.latestRecording]);
+  const activeStudioExportHistory = activeStudioRecordingKey
+    ? (studioExportHistory.recordings[activeStudioRecordingKey] ?? null)
+    : null;
 
   useEffect(() => {
     persistThemeMode(themeMode);
@@ -814,6 +856,10 @@ function DesktopApp() {
   useEffect(() => {
     persistStudioIntakePersistence(studioIntakePersistence);
   }, [studioIntakePersistence]);
+
+  useEffect(() => {
+    persistStudioExportHistory(studioExportHistory);
+  }, [studioExportHistory]);
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -2056,6 +2102,19 @@ function DesktopApp() {
             exportedRecordingKey,
           ),
         );
+        setStudioExportHistory((current) =>
+          markStudioRecordingExported(current, exportedRecordingKey, {
+            exportedAt,
+            formats: [
+              ...(timestampPreview ? (["timestamps"] as const) : []),
+              ...(jsonPreview ? (["json"] as const) : []),
+              ...(edlPreview ? (["edl"] as const) : []),
+            ],
+            acceptedCount: keptCandidates.length,
+            pulseSessionId: projectSession.id,
+            pulseSessionTitle: projectSession.title,
+          }),
+        );
       }
       setStudioIntake((current) => ({
         ...current,
@@ -3235,7 +3294,7 @@ function DesktopApp() {
                     onClick={() => setStudioIntakeFilter(filter)}
                     type="button"
                   >
-                    {label}
+                    {label} ({studioIntakeFilterCounts[filter]})
                   </button>
                 ))}
                 <button
@@ -3256,112 +3315,144 @@ function DesktopApp() {
                   {filteredStudioIntakeRecordings.length === 0 ? (
                     <p>No Studio recordings match this filter.</p>
                   ) : null}
-                  {filteredStudioIntakeRecordings.map((recording) => (
-                    <div
-                      className="studio-recording-card"
-                      key={recording.queueId}
-                    >
-                      <div className="studio-intake-card-header">
-                        <div>
-                          <span className="detail-label">
-                            {studioIntakeSourceLabel(recording.source)}
-                          </span>
-                          <strong>
-                            {extractSourceName(recording.outputPath)}
-                          </strong>
-                        </div>
-                        <span
-                          className={`analysis-readiness-pill ${studioIntakeStateTone(
-                            recording.state,
-                          )}`}
-                        >
-                          {studioIntakeStateLabel(recording.state)}
-                        </span>
-                      </div>
-                      <p className="analysis-summary-path">
-                        {recording.outputPath}
-                      </p>
-                      <p>{recording.detail}</p>
-                      {recording.captureDetail ? (
-                        <p>{recording.captureDetail}</p>
-                      ) : null}
-                      <div className="studio-output-readiness">
-                        <span
-                          className={`analysis-readiness-pill ${studioIntakeStateTone(
-                            recording.state,
-                          )}`}
-                        >
-                          {studioRecordingCompletionLabel(recording)}
-                        </span>
-                        <span
-                          className={`analysis-readiness-pill ${
-                            recording.verificationState === "verified"
-                              ? "ready"
-                              : "blocked"
-                          }`}
-                        >
-                          {studioRecordingVerificationLabel(recording)}
-                        </span>
-                        <p>
-                          {recording.completionDetail ??
-                            recording.verificationDetail ??
-                            "Recording verification metadata is not available."}
-                        </p>
-                        <p>{studioRecordingSizeLabel(recording)}</p>
-                      </div>
-                      {recording.outputReadiness ? (
-                        <div className="studio-output-readiness">
+                  {filteredStudioIntakeRecordings.map((recording) => {
+                    const importBlockReason =
+                      studioRecordingImportBlockReason(recording);
+                    const warning = studioRecordingWarning(recording);
+                    const exportHistory =
+                      studioExportHistory.recordings[
+                        studioRecordingQueueKey(recording)
+                      ] ?? null;
+
+                    return (
+                      <div
+                        className="studio-recording-card"
+                        key={recording.queueId}
+                      >
+                        <div className="studio-intake-card-header">
+                          <div>
+                            <span className="detail-label">
+                              {studioIntakeSourceLabel(recording.source)}
+                            </span>
+                            <strong>
+                              {extractSourceName(recording.outputPath)}
+                            </strong>
+                          </div>
                           <span
-                            className={`analysis-readiness-pill ${outputReadinessTone(
-                              recording.outputReadiness,
+                            className={`analysis-readiness-pill ${studioIntakeStateTone(
+                              recording.state,
                             )}`}
                           >
-                            {outputReadinessLabel(recording.outputReadiness)}
+                            {studioIntakeStateLabel(recording.state)}
                           </span>
-                          <p>{recording.outputReadiness.detail}</p>
-                          {recording.outputReadiness.blockers.length > 0 ? (
-                            <p>
-                              Blocked by{" "}
-                              {recording.outputReadiness.blockers.join(", ")}
-                            </p>
-                          ) : null}
                         </div>
-                      ) : null}
-                      <div className="action-row">
-                        <button
-                          className="button-secondary"
-                          disabled={
-                            isAnalyzing || !canImportStudioRecording(recording)
-                          }
-                          onClick={() => handleImportStudioRecording(recording)}
-                          type="button"
-                        >
-                          Import for review
-                        </button>
-                        {recording.state === "dismissed" ? (
+                        <p className="analysis-summary-path">
+                          {recording.outputPath}
+                        </p>
+                        <p>{recording.detail}</p>
+                        {recording.captureDetail ? (
+                          <p>{recording.captureDetail}</p>
+                        ) : null}
+                        <div className="studio-output-readiness">
+                          <span
+                            className={`analysis-readiness-pill ${studioIntakeStateTone(
+                              recording.state,
+                            )}`}
+                          >
+                            {studioRecordingCompletionLabel(recording)}
+                          </span>
+                          <span
+                            className={`analysis-readiness-pill ${
+                              recording.verificationState === "verified"
+                                ? "ready"
+                                : "blocked"
+                            }`}
+                          >
+                            {studioRecordingVerificationLabel(recording)}
+                          </span>
+                          <p>
+                            {recording.completionDetail ??
+                              recording.verificationDetail ??
+                              "Recording verification metadata is not available."}
+                          </p>
+                          <p>{studioRecordingSizeLabel(recording)}</p>
+                        </div>
+                        {warning ? (
+                          <p className="review-status-copy">{warning}</p>
+                        ) : null}
+                        {importBlockReason ? (
+                          <p className="review-status-copy">
+                            {importBlockReason}
+                          </p>
+                        ) : null}
+                        {exportHistory ? (
+                          <p className="review-status-copy">
+                            Exported {exportHistory.acceptedCount} kept moments
+                            as {exportHistory.formats.join(", ")} on{" "}
+                            {new Date(
+                              exportHistory.exportedAt,
+                            ).toLocaleString()}
+                            .
+                          </p>
+                        ) : null}
+                        {recording.outputReadiness ? (
+                          <div className="studio-output-readiness">
+                            <span
+                              className={`analysis-readiness-pill ${outputReadinessTone(
+                                recording.outputReadiness,
+                              )}`}
+                            >
+                              {outputReadinessLabel(recording.outputReadiness)}
+                            </span>
+                            <p>{recording.outputReadiness.detail}</p>
+                            {recording.outputReadiness.blockers.length > 0 ? (
+                              <p>
+                                Blocked by{" "}
+                                {recording.outputReadiness.blockers.join(", ")}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        <div className="action-row">
                           <button
                             className="button-secondary"
+                            disabled={isAnalyzing || Boolean(importBlockReason)}
                             onClick={() =>
-                              handleRestoreStudioRecording(recording)
+                              handleImportStudioRecording(recording)
+                            }
+                            title={
+                              importBlockReason ??
+                              "Import this Studio recording for review."
                             }
                             type="button"
                           >
-                            Restore
+                            Import for review
                           </button>
-                        ) : (
-                          <button
-                            className="button-secondary"
-                            onClick={() =>
-                              handleDismissStudioRecording(recording)
-                            }
-                            type="button"
-                          >
-                            Dismiss
-                          </button>
-                        )}
+                          {recording.state === "dismissed" ? (
+                            <button
+                              className="button-secondary"
+                              onClick={() =>
+                                handleRestoreStudioRecording(recording)
+                              }
+                              type="button"
+                            >
+                              Restore
+                            </button>
+                          ) : (
+                            <button
+                              className="button-secondary"
+                              onClick={() =>
+                                handleDismissStudioRecording(recording)
+                              }
+                              type="button"
+                            >
+                              Dismiss
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p>
@@ -3578,6 +3669,7 @@ function DesktopApp() {
             profile={currentProfile}
             jsonPreview={jsonPreview}
             reviewError={reviewError}
+            studioRecordingExportHistory={activeStudioExportHistory}
             studioExportStatus={studioExportStatus}
             visibleCandidateCount={queueCandidates.length}
           />
@@ -5793,6 +5885,25 @@ function persistStudioIntakePersistence(persistence: StudioIntakePersistence) {
   window.localStorage.setItem(
     STUDIO_INTAKE_STORAGE_KEY,
     serializeStudioIntakePersistence(persistence),
+  );
+}
+
+function loadStudioExportHistory(): StudioRecordingExportHistory {
+  if (typeof window === "undefined") {
+    return parseStudioExportHistory(null);
+  }
+  return parseStudioExportHistory(
+    window.localStorage.getItem(STUDIO_EXPORT_HISTORY_STORAGE_KEY),
+  );
+}
+
+function persistStudioExportHistory(history: StudioRecordingExportHistory) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.setItem(
+    STUDIO_EXPORT_HISTORY_STORAGE_KEY,
+    serializeStudioExportHistory(history),
   );
 }
 
