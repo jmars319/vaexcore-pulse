@@ -226,9 +226,15 @@ const intakeQueue = enqueueStudioRecording([], historyRecording, {
   receivedAt: generatedAt,
 });
 assert.equal(intakeQueue[0]?.state, "ready");
-assert.equal(intakeQueue[0]?.captureMode, "display");
-assert.equal(intakeQueue[0]?.completionState, "completed");
-assert.equal(intakeQueue[0]?.verificationState, "verified");
+assert.equal(intakeQueue[0]?.captureMode, validHandoff.recording.captureMode);
+assert.equal(
+  intakeQueue[0]?.completionState,
+  validHandoff.recording.completionState,
+);
+assert.equal(
+  intakeQueue[0]?.verificationState,
+  validHandoff.recording.verificationState,
+);
 assert.equal(canImportStudioRecording(intakeQueue[0]), true);
 assert.equal(
   enqueueStudioRecording(intakeQueue, historyRecording, {
