@@ -61,6 +61,8 @@ export interface PulseRecordingHandoffDocument {
     outputPath: string;
     profileId: string | null;
     profileName: string | null;
+    captureMode?: string | null;
+    captureDetail?: string | null;
     stoppedAt: string;
   };
   outputReady?: {

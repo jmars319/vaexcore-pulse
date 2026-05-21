@@ -227,6 +227,10 @@ struct PulseRecordingHandoffRecording {
     output_path: String,
     profile_id: Option<String>,
     profile_name: Option<String>,
+    #[serde(default)]
+    capture_mode: Option<String>,
+    #[serde(default)]
+    capture_detail: Option<String>,
     stopped_at: String,
 }
 
@@ -567,6 +571,8 @@ fn consume_pulse_recording_handoff_file(
                 "requestId": handoff.request_id,
                 "sessionId": handoff.recording.session_id,
                 "outputPath": handoff.recording.output_path,
+                "captureMode": handoff.recording.capture_mode,
+                "captureDetail": handoff.recording.capture_detail,
                 "outputReady": handoff.output_ready,
             }),
         ) {
@@ -2931,7 +2937,12 @@ mod tests {
 
         let handoff = consume_pulse_recording_handoff_file(&path, false);
 
-        assert!(handoff.is_some());
+        let handoff = handoff.expect("handoff should be consumed");
+        assert_eq!(handoff.recording.capture_mode.as_deref(), Some("display"));
+        assert_eq!(
+            handoff.recording.capture_detail.as_deref(),
+            Some("Main Display recorded as a source-backed display.")
+        );
         assert!(!path.exists());
         let _ = fs::remove_dir_all(directory);
     }
@@ -3029,6 +3040,10 @@ mod tests {
                 output_path: "/tmp/rec_smoke.mkv".to_string(),
                 profile_id: Some("profile_1080p".to_string()),
                 profile_name: Some("1080p".to_string()),
+                capture_mode: Some("display".to_string()),
+                capture_detail: Some(
+                    "Main Display recorded as a source-backed display.".to_string(),
+                ),
                 stopped_at: "2026-05-06T12:05:00Z".to_string(),
             },
             output_ready: None,
