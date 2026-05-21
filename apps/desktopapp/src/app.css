@@ -900,10 +900,27 @@ h3 {
   border: 1px solid var(--surface-card-border);
 }
 
+.studio-intake-queue {
+  display: grid;
+  gap: 12px;
+}
+
+.studio-intake-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .studio-recording-card strong {
   display: block;
   margin-top: 6px;
   color: var(--text-strong);
+}
+
+.studio-recording-card p {
+  margin: 10px 0 0;
+  color: var(--muted);
 }
 
 .studio-output-readiness {

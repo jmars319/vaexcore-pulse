@@ -101,12 +101,16 @@ import {
 } from "./lib/resumeState";
 import { fetchWithLocalApiMessage, localApiTimeouts } from "./lib/localApi";
 import {
+  enqueueStudioRecording,
   fetchLatestStudioRecording,
+  markStudioRecordingQueueItem,
   studioEventSocketUrl,
   studioRecordingFromMessage,
+  studioRecordingQueueKey,
   studioRequestHeaders,
   type StudioDiscovery,
   type StudioIntakeState,
+  type StudioIntakeQueueItem,
   type StudioOutputReadiness,
   type StudioRecordingCandidate,
 } from "./lib/studioIntegration";
@@ -204,6 +208,8 @@ type PulseRecordingHandoff = {
     outputPath: string;
     profileId: string | null;
     profileName: string | null;
+    captureMode?: string | null;
+    captureDetail?: string | null;
     stoppedAt: string;
   };
   outputReady?: StudioOutputReadiness | null;
@@ -263,6 +269,44 @@ function outputReadinessTone(
   readiness: StudioOutputReadiness,
 ): "ready" | "blocked" {
   return readiness.ready ? "ready" : "blocked";
+}
+
+function studioIntakeStateLabel(state: StudioIntakeQueueItem["state"]): string {
+  switch (state) {
+    case "ready":
+      return "Ready";
+    case "stale":
+      return "Stale";
+    case "malformed":
+      return "Malformed";
+    case "duplicate":
+      return "Duplicate";
+    case "already-consumed":
+      return "Imported";
+    case "already-exported":
+      return "Exported";
+  }
+}
+
+function studioIntakeStateTone(
+  state: StudioIntakeQueueItem["state"],
+): "ready" | "blocked" {
+  return state === "ready" || state === "already-consumed"
+    ? "ready"
+    : "blocked";
+}
+
+function studioIntakeSourceLabel(
+  source: StudioIntakeQueueItem["source"],
+): string {
+  switch (source) {
+    case "history":
+      return "Studio history";
+    case "event":
+      return "Studio event";
+    case "handoff":
+      return "Studio handoff";
+  }
 }
 type DesktopNavItem = { id: DesktopPage; label: string };
 type ProfileLibraryChangedPayload = {
@@ -392,6 +436,7 @@ function DesktopApp() {
     detail: "Looking for vaexcore studio.",
     apiUrl: null,
     latestRecording: null,
+    recordings: [],
   });
   const [studioExportStatus, setStudioExportStatus] = useState<string | null>(
     null,
@@ -735,6 +780,13 @@ function DesktopApp() {
             : "Connected to vaexcore studio. Waiting for stopped recordings.",
           apiUrl: discovery.apiUrl,
           latestRecording: latestRecording ?? current.latestRecording,
+          recordings: enqueueStudioRecording(
+            current.recordings,
+            latestRecording,
+            {
+              source: "history",
+            },
+          ),
         }));
 
         socket = new WebSocket(studioEventSocketUrl(discovery));
@@ -750,6 +802,13 @@ function DesktopApp() {
             detail: `Studio stopped recording ${extractSourceName(nextRecording.outputPath)}.`,
             apiUrl: discovery.apiUrl,
             latestRecording: nextRecording,
+            recordings: enqueueStudioRecording(
+              current.recordings,
+              nextRecording,
+              {
+                source: "event",
+              },
+            ),
           }));
         });
         socket.addEventListener("close", () => {
@@ -1610,11 +1669,32 @@ function DesktopApp() {
     setActivePage("new-analysis");
   }
 
+  function handleImportStudioRecording(item: StudioIntakeQueueItem) {
+    if (item.state !== "ready") {
+      return;
+    }
+
+    handleUseStudioRecording(item);
+    setStudioIntake((current) => ({
+      ...current,
+      latestRecording: item,
+      detail: `Imported ${extractSourceName(item.outputPath)} into Scan Intake.`,
+      recordings: markStudioRecordingQueueItem(
+        current.recordings,
+        item.queueId,
+        "already-consumed",
+      ),
+    }));
+  }
+
   function applyPulseRecordingHandoff(handoff: PulseRecordingHandoff) {
     const recording: StudioRecordingCandidate = {
       sessionId: handoff.recording.sessionId,
       outputPath: handoff.recording.outputPath,
       profileId: handoff.recording.profileId,
+      profileName: handoff.recording.profileName,
+      captureMode: handoff.recording.captureMode ?? null,
+      captureDetail: handoff.recording.captureDetail ?? null,
       stoppedAt: handoff.recording.stoppedAt,
       outputReadiness: handoff.outputReady ?? null,
     };
@@ -1625,11 +1705,14 @@ function DesktopApp() {
     setStudioIntake((current) => ({
       ...current,
       connection: "connected",
-      detail: `${handoff.sourceAppName} sent ${extractSourceName(recording.outputPath)} for review.${readinessDetail}`,
+      detail: `${handoff.sourceAppName} queued ${extractSourceName(recording.outputPath)} for manual import.${readinessDetail}`,
       latestRecording: recording,
+      recordings: enqueueStudioRecording(current.recordings, recording, {
+        source: "handoff",
+        requestId: handoff.requestId,
+        receivedAt: handoff.requestedAt,
+      }),
     }));
-    setSelectedMediaPath(recording.outputPath);
-    setAnalysisTitle(buildSuggestedSessionTitle(recording.outputPath));
     setAnalysisError(null);
     setActivePage("new-analysis");
   }
@@ -1744,11 +1827,28 @@ function DesktopApp() {
       setStudioExportStatus(
         `Confirmed ${confirmedSourceEventIds.length} kept moments in Studio.`,
       );
+      const exportedRecordingKey =
+        studioIntake.latestRecording?.outputPath ===
+        projectSession.mediaSource.path
+          ? studioRecordingQueueKey(studioIntake.latestRecording)
+          : null;
       setStudioIntake((current) => ({
         ...current,
         connection: "connected",
         detail: "Studio accepted the latest kept moments.",
         apiUrl: discovery.apiUrl,
+        recordings: exportedRecordingKey
+          ? current.recordings.map((item) =>
+              studioRecordingQueueKey(item) === exportedRecordingKey
+                ? {
+                    ...item,
+                    state: "already-exported",
+                    detail:
+                      "Studio recording already has exported review results.",
+                  }
+                : item,
+            )
+          : current.recordings,
       }));
     } catch (error) {
       setStudioExportStatus(
@@ -2890,57 +2990,76 @@ function DesktopApp() {
                       : "Offline"}
                 </span>
               </div>
-              {studioIntake.latestRecording ? (
-                <div className="studio-recording-card">
-                  <span className="detail-label">Latest recording</span>
-                  <strong>
-                    {extractSourceName(studioIntake.latestRecording.outputPath)}
-                  </strong>
-                  <p className="analysis-summary-path">
-                    {studioIntake.latestRecording.outputPath}
-                  </p>
-                  {studioIntake.latestRecording.outputReadiness ? (
-                    <div className="studio-output-readiness">
-                      <span
-                        className={`analysis-readiness-pill ${outputReadinessTone(
-                          studioIntake.latestRecording.outputReadiness,
-                        )}`}
-                      >
-                        {outputReadinessLabel(
-                          studioIntake.latestRecording.outputReadiness,
-                        )}
-                      </span>
-                      <p>
-                        {studioIntake.latestRecording.outputReadiness.detail}
-                      </p>
-                      {studioIntake.latestRecording.outputReadiness.blockers
-                        .length > 0 ? (
-                        <p>
-                          Blocked by{" "}
-                          {studioIntake.latestRecording.outputReadiness.blockers.join(
-                            ", ",
-                          )}
-                        </p>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  <div className="action-row">
-                    <button
-                      className="button-secondary"
-                      disabled={isAnalyzing}
-                      onClick={() =>
-                        handleUseStudioRecording(studioIntake.latestRecording!)
-                      }
-                      type="button"
+              {studioIntake.recordings.length > 0 ? (
+                <div
+                  className="studio-intake-queue"
+                  data-testid="studio-intake-queue"
+                >
+                  {studioIntake.recordings.map((recording) => (
+                    <div
+                      className="studio-recording-card"
+                      key={recording.queueId}
                     >
-                      Use recording
-                    </button>
-                  </div>
+                      <div className="studio-intake-card-header">
+                        <div>
+                          <span className="detail-label">
+                            {studioIntakeSourceLabel(recording.source)}
+                          </span>
+                          <strong>
+                            {extractSourceName(recording.outputPath)}
+                          </strong>
+                        </div>
+                        <span
+                          className={`analysis-readiness-pill ${studioIntakeStateTone(
+                            recording.state,
+                          )}`}
+                        >
+                          {studioIntakeStateLabel(recording.state)}
+                        </span>
+                      </div>
+                      <p className="analysis-summary-path">
+                        {recording.outputPath}
+                      </p>
+                      <p>{recording.detail}</p>
+                      {recording.captureDetail ? (
+                        <p>{recording.captureDetail}</p>
+                      ) : null}
+                      {recording.outputReadiness ? (
+                        <div className="studio-output-readiness">
+                          <span
+                            className={`analysis-readiness-pill ${outputReadinessTone(
+                              recording.outputReadiness,
+                            )}`}
+                          >
+                            {outputReadinessLabel(recording.outputReadiness)}
+                          </span>
+                          <p>{recording.outputReadiness.detail}</p>
+                          {recording.outputReadiness.blockers.length > 0 ? (
+                            <p>
+                              Blocked by{" "}
+                              {recording.outputReadiness.blockers.join(", ")}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
+                      <div className="action-row">
+                        <button
+                          className="button-secondary"
+                          disabled={isAnalyzing || recording.state !== "ready"}
+                          onClick={() => handleImportStudioRecording(recording)}
+                          type="button"
+                        >
+                          Import for review
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <p>
                   Stop a Studio recording and Pulse will offer it here for the
-                  next scan.
+                  next scan. Import stays manual so the active review session
+                  does not change unexpectedly.
                 </p>
               )}
             </article>

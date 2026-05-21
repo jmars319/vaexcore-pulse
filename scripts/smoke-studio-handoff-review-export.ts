@@ -8,7 +8,11 @@ import {
 } from "@vaexcore/pulse-export";
 import { projectSessionSchema } from "@vaexcore/pulse-shared-types";
 import { createMockProjectSession } from "@vaexcore/pulse-shared-types/testing";
-import { studioRecordingFromMessage } from "../apps/desktopapp/src/lib/studioIntegration.ts";
+import {
+  enqueueStudioRecording,
+  studioRecordingFromHistoryEntry,
+  studioRecordingFromMessage,
+} from "../apps/desktopapp/src/lib/studioIntegration.ts";
 
 const generatedAt = "2026-05-21T03:20:00.000Z";
 const validHandoff = {
@@ -23,6 +27,8 @@ const validHandoff = {
     outputPath: "/tmp/vaexcore/studio/source-aware-smoke.mkv",
     profileId: "profile_1080p",
     profileName: "1080p Local",
+    captureMode: "display",
+    captureDetail: "Main Display recorded as a source-backed display.",
     stoppedAt: generatedAt,
   },
   outputReady: {
@@ -149,12 +155,56 @@ const studioRecording = studioRecordingFromMessage(
       session_id: validHandoff.recording.sessionId,
       output_path: validHandoff.recording.outputPath,
       profile_id: validHandoff.recording.profileId,
+      profile_name: validHandoff.recording.profileName,
+      capture_mode: validHandoff.recording.captureMode,
+      capture_detail: validHandoff.recording.captureDetail,
     },
   }),
 );
 assert.equal(studioRecording?.sessionId, validHandoff.recording.sessionId);
 assert.equal(studioRecording?.outputPath, validHandoff.recording.outputPath);
 assert.equal(studioRecording?.profileId, validHandoff.recording.profileId);
+assert.equal(
+  studioRecording?.captureDetail,
+  validHandoff.recording.captureDetail,
+);
+
+const historyRecording = studioRecordingFromHistoryEntry({
+  session_id: validHandoff.recording.sessionId,
+  output_path: validHandoff.recording.outputPath,
+  profile_id: validHandoff.recording.profileId,
+  profile_name: validHandoff.recording.profileName,
+  capture_mode: validHandoff.recording.captureMode,
+  capture_detail: validHandoff.recording.captureDetail,
+  stopped_at: validHandoff.recording.stoppedAt,
+  output_readiness: validHandoff.outputReady,
+});
+assert.equal(
+  historyRecording?.outputReadiness?.detail,
+  validHandoff.outputReady.detail,
+);
+
+const intakeQueue = enqueueStudioRecording([], historyRecording, {
+  source: "history",
+  receivedAt: generatedAt,
+});
+assert.equal(intakeQueue[0]?.state, "ready");
+assert.equal(intakeQueue[0]?.captureMode, "display");
+assert.equal(
+  enqueueStudioRecording(intakeQueue, historyRecording, {
+    source: "history",
+    receivedAt: generatedAt,
+  })[0]?.state,
+  "duplicate",
+);
+assert.equal(
+  enqueueStudioRecording([], historyRecording, {
+    source: "handoff",
+    requestId: validHandoff.requestId,
+    receivedAt: "2026-05-22T04:00:00.000Z",
+  })[0]?.state,
+  "stale",
+);
 
 const baseSession = createMockProjectSession();
 const acceptedDecision = makeReviewDecision(
