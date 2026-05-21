@@ -243,11 +243,14 @@ assert.equal(
   })[0]?.state,
   "duplicate",
 );
+const staleQueueReceivedAt = new Date(
+  new Date(validHandoff.recording.stoppedAt).getTime() + 25 * 60 * 60 * 1000,
+).toISOString();
 assert.equal(
   enqueueStudioRecording([], historyRecording, {
     source: "handoff",
     requestId: validHandoff.requestId,
-    receivedAt: "2026-05-22T04:00:00.000Z",
+    receivedAt: staleQueueReceivedAt,
   })[0]?.state,
   "stale",
 );
