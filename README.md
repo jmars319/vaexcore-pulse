@@ -69,6 +69,15 @@ pnpm run release:check
 
 Use `pnpm run doctor` only with the repo script form where documented; `pnpm doctor` is a pnpm command name.
 
+## Local Tooling
+
+- Use `cargo audit` and `cargo deny` for Rust/Tauri dependency advisory, license, duplicate, and policy checks.
+- Use `sccache` for repeated Rust/Tauri build loops.
+- Use `uv` for Python analyzer project work and `pipx` for standalone Python CLIs.
+- Use `shellcheck` and `shfmt` after editing shell scripts.
+- Use `actionlint` after editing GitHub Actions workflows.
+- Use `osv-scanner` for broad dependency advisory checks across manifests and lockfiles.
+
 ## Direction
 
 - Improve analyzer quality and reason-code explainability.
