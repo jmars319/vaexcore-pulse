@@ -95,7 +95,7 @@ assert.deepEqual(
   }),
   {
     state: "ready",
-    requestId: "studio-handoff-smoke-001",
+    requestId: validHandoff.requestId,
     detail: "Studio recording handoff is ready for review.",
   },
 );
