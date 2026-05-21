@@ -33,7 +33,7 @@
     "diagnostics": "bash ./scripts/diagnostics.sh",
     "smoke:studio": "pnpm exec tsx scripts/smoke-studio-integration.ts",
     "smoke:visual": "node scripts/visual-smoke.mjs",
-    "test": "pnpm exec tsx --test packages/shared-types/src/mock.test.ts packages/domain/src/index.test.ts services/api/src/app.test.ts",
+    "test": "pnpm exec tsx --test packages/shared-types/src/mock.test.ts packages/domain/src/index.test.ts packages/export/src/index.test.ts services/api/src/app.test.ts",
     "typecheck": "pnpm --recursive --if-present typecheck",
     "lint": "pnpm exec prettier --check .",
     "verify:web": "bash ./scripts/verify-web.sh",

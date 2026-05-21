@@ -26,6 +26,7 @@ import {
   type ReviewQueueMode,
 } from "@vaexcore/pulse-domain";
 import {
+  toEdlExport,
   toJsonCandidateExport,
   toTimestampExport,
 } from "@vaexcore/pulse-export";
@@ -624,6 +625,13 @@ function DesktopApp() {
 
   const jsonPreview = projectSession
     ? toJsonCandidateExport(
+        projectSession.mediaSource,
+        sessionCandidates,
+        Object.values(decisionsByCandidateId),
+      )
+    : "";
+  const edlPreview = projectSession
+    ? toEdlExport(
         projectSession.mediaSource,
         sessionCandidates,
         Object.values(decisionsByCandidateId),
@@ -3093,6 +3101,7 @@ function DesktopApp() {
               projectSession && acceptedCount > 0,
             )}
             decision={selectedDecision}
+            edlPreview={edlPreview}
             exportPreview={timestampPreview}
             isCurrentCandidateSentToStudio={Boolean(
               projectSession &&

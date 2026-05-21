@@ -27,6 +27,7 @@ type CandidateDetailProps = {
   profile: ContentProfile;
   transcript: TranscriptChunk[];
   exportPreview: string;
+  edlPreview: string;
   jsonPreview: string;
   candidateIndex: number;
   candidateCount: number;
@@ -65,6 +66,7 @@ export function CandidateDetail({
   profile,
   transcript,
   exportPreview,
+  edlPreview,
   jsonPreview,
   candidateIndex,
   candidateCount,
@@ -119,7 +121,7 @@ export function CandidateDetail({
   const plainDescription = describeCandidatePlainly(candidate);
 
   async function handleCopyExport(
-    format: "timestamps" | "json",
+    format: "timestamps" | "json" | "edl",
     value: string,
   ) {
     if (!value) {
@@ -130,7 +132,11 @@ export function CandidateDetail({
     try {
       await navigator.clipboard.writeText(value);
       setCopyFeedback(
-        format === "timestamps" ? "Copied timestamps." : "Copied JSON export.",
+        format === "timestamps"
+          ? "Copied timestamps."
+          : format === "edl"
+            ? "Copied EDL."
+            : "Copied JSON export.",
       );
     } catch {
       setCopyFeedback("Copy failed on this machine.");
@@ -441,6 +447,17 @@ export function CandidateDetail({
                     Copy JSON
                   </button>
                 ) : null}
+                {edlPreview ? (
+                  <button
+                    className="button-secondary"
+                    onClick={() => {
+                      void handleCopyExport("edl", edlPreview);
+                    }}
+                    type="button"
+                  >
+                    Copy EDL
+                  </button>
+                ) : null}
                 <button
                   className="button-secondary"
                   disabled={!canExportAcceptedToStudio || isExportingToStudio}
@@ -475,6 +492,15 @@ export function CandidateDetail({
                     <span className="queue-count">Optional</span>
                   </summary>
                   <pre>{jsonPreview}</pre>
+                </details>
+              ) : null}
+              {edlPreview ? (
+                <details className="internal-details nested-export-details">
+                  <summary className="internal-details-summary">
+                    <span>EDL preview</span>
+                    <span className="queue-count">Optional</span>
+                  </summary>
+                  <pre>{edlPreview}</pre>
                 </details>
               ) : null}
             </details>
