@@ -101,13 +101,21 @@ import {
 } from "./lib/resumeState";
 import { fetchWithLocalApiMessage, localApiTimeouts } from "./lib/localApi";
 import {
+  canImportStudioRecording,
   enqueueStudioRecording,
   fetchLatestStudioRecording,
+  markStudioIntakePersistence,
   markStudioRecordingQueueItem,
+  parseStudioIntakePersistence,
+  restoreStudioIntakePersistence,
+  serializeStudioIntakePersistence,
+  STUDIO_INTAKE_STORAGE_KEY,
+  studioIntakePersistenceSets,
   studioEventSocketUrl,
   studioRecordingFromMessage,
   studioRecordingQueueKey,
   studioRequestHeaders,
+  type StudioIntakePersistence,
   type StudioDiscovery,
   type StudioIntakeState,
   type StudioIntakeQueueItem,
@@ -210,10 +218,23 @@ type PulseRecordingHandoff = {
     profileName: string | null;
     captureMode?: string | null;
     captureDetail?: string | null;
+    completionState?: StudioRecordingCandidate["completionState"];
+    completionDetail?: string | null;
+    verificationState?: StudioRecordingCandidate["verificationState"];
+    verificationDetail?: string | null;
+    fileSizeBytes?: number | null;
+    durationMs?: number | null;
+    processStatus?: string | null;
     stoppedAt: string;
   };
   outputReady?: StudioOutputReadiness | null;
 };
+type StudioIntakeFilter =
+  | "ready"
+  | "needs-attention"
+  | "imported"
+  | "exported"
+  | "hidden";
 type SuiteCommand = {
   schemaVersion: number;
   commandId: string;
@@ -279,12 +300,16 @@ function studioIntakeStateLabel(state: StudioIntakeQueueItem["state"]): string {
       return "Stale";
     case "malformed":
       return "Malformed";
+    case "unusable":
+      return "Needs attention";
     case "duplicate":
       return "Duplicate";
     case "already-consumed":
       return "Imported";
     case "already-exported":
       return "Exported";
+    case "dismissed":
+      return "Hidden";
   }
 }
 
@@ -294,6 +319,92 @@ function studioIntakeStateTone(
   return state === "ready" || state === "already-consumed"
     ? "ready"
     : "blocked";
+}
+
+function studioRecordingVerificationLabel(
+  recording: StudioRecordingCandidate,
+): string {
+  switch (recording.verificationState) {
+    case "verified":
+      return "Verified";
+    case "basic_verified":
+      return "Basic verified";
+    case "missing":
+      return "Missing";
+    case "empty":
+      return "Empty";
+    case "unreadable":
+      return "Unreadable";
+    case "skipped":
+      return "Skipped";
+    default:
+      return "Unverified";
+  }
+}
+
+function studioRecordingCompletionLabel(
+  recording: StudioRecordingCandidate,
+): string {
+  switch (recording.completionState) {
+    case "completed":
+      return "Completed";
+    case "partial":
+      return "Partial";
+    case "failed":
+      return "Failed";
+    case "skipped":
+      return "Skipped";
+    case "unknown":
+      return "Unknown";
+    default:
+      return "Legacy";
+  }
+}
+
+function studioRecordingSizeLabel(recording: StudioRecordingCandidate): string {
+  const size =
+    typeof recording.fileSizeBytes === "number"
+      ? formatByteCount(recording.fileSizeBytes)
+      : "size unknown";
+  const duration =
+    typeof recording.durationMs === "number"
+      ? `${(recording.durationMs / 1000).toFixed(1)} sec`
+      : "duration unknown";
+  return `${size}, ${duration}`;
+}
+
+function filterStudioIntakeRecordings(
+  recordings: StudioIntakeQueueItem[],
+  filter: StudioIntakeFilter,
+): StudioIntakeQueueItem[] {
+  return recordings.filter((recording) => {
+    switch (filter) {
+      case "ready":
+        return recording.state === "ready";
+      case "needs-attention":
+        return (
+          recording.state === "stale" ||
+          recording.state === "malformed" ||
+          recording.state === "unusable" ||
+          recording.state === "duplicate"
+        );
+      case "imported":
+        return recording.state === "already-consumed";
+      case "exported":
+        return recording.state === "already-exported";
+      case "hidden":
+        return recording.state === "dismissed";
+    }
+  });
+}
+
+function formatByteCount(value: number): string {
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  if (value < 1024 * 1024 * 1024) {
+    return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  return `${(value / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
 function studioIntakeSourceLabel(
@@ -438,6 +549,10 @@ function DesktopApp() {
     latestRecording: null,
     recordings: [],
   });
+  const [studioIntakeFilter, setStudioIntakeFilter] =
+    useState<StudioIntakeFilter>("ready");
+  const [studioIntakePersistence, setStudioIntakePersistence] =
+    useState<StudioIntakePersistence>(() => loadStudioIntakePersistence());
   const [studioExportStatus, setStudioExportStatus] = useState<string | null>(
     null,
   );
@@ -660,6 +775,15 @@ function DesktopApp() {
     () => buildSuiteTimeline(suiteStatus, suiteTimelineEvents),
     [suiteStatus, suiteTimelineEvents],
   );
+  const studioPersistenceSets = useMemo(
+    () => studioIntakePersistenceSets(studioIntakePersistence),
+    [studioIntakePersistence],
+  );
+  const filteredStudioIntakeRecordings = useMemo(
+    () =>
+      filterStudioIntakeRecordings(studioIntake.recordings, studioIntakeFilter),
+    [studioIntake.recordings, studioIntakeFilter],
+  );
 
   const timestampPreview = projectSession
     ? toTimestampExport(
@@ -686,6 +810,10 @@ function DesktopApp() {
   useEffect(() => {
     persistThemeMode(themeMode);
   }, [themeMode]);
+
+  useEffect(() => {
+    persistStudioIntakePersistence(studioIntakePersistence);
+  }, [studioIntakePersistence]);
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -785,6 +913,7 @@ function DesktopApp() {
             latestRecording,
             {
               source: "history",
+              ...studioPersistenceSets,
             },
           ),
         }));
@@ -807,6 +936,7 @@ function DesktopApp() {
               nextRecording,
               {
                 source: "event",
+                ...studioPersistenceSets,
               },
             ),
           }));
@@ -845,7 +975,7 @@ function DesktopApp() {
       isSubscribed = false;
       socket?.close();
     };
-  }, []);
+  }, [studioPersistenceSets]);
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -1670,11 +1800,15 @@ function DesktopApp() {
   }
 
   function handleImportStudioRecording(item: StudioIntakeQueueItem) {
-    if (item.state !== "ready") {
+    if (!canImportStudioRecording(item)) {
       return;
     }
 
     handleUseStudioRecording(item);
+    const key = studioRecordingQueueKey(item);
+    setStudioIntakePersistence((current) =>
+      markStudioIntakePersistence(current, "consumed", key),
+    );
     setStudioIntake((current) => ({
       ...current,
       latestRecording: item,
@@ -1687,6 +1821,80 @@ function DesktopApp() {
     }));
   }
 
+  function handleDismissStudioRecording(item: StudioIntakeQueueItem) {
+    const key = studioRecordingQueueKey(item);
+    setStudioIntakePersistence((current) =>
+      markStudioIntakePersistence(current, "dismissed", key),
+    );
+    setStudioIntake((current) => ({
+      ...current,
+      detail: `Hidden ${extractSourceName(item.outputPath)} from active intake.`,
+      recordings: markStudioRecordingQueueItem(
+        current.recordings,
+        item.queueId,
+        "dismissed",
+      ),
+    }));
+  }
+
+  function handleRestoreStudioRecording(item: StudioIntakeQueueItem) {
+    const key = studioRecordingQueueKey(item);
+    setStudioIntakePersistence((current) =>
+      restoreStudioIntakePersistence(current, key),
+    );
+    setStudioIntake((current) => ({
+      ...current,
+      detail: `Restored ${extractSourceName(item.outputPath)} to intake.`,
+      recordings: markStudioRecordingQueueItem(
+        current.recordings,
+        item.queueId,
+        item.verificationState === "missing" ||
+          item.verificationState === "empty" ||
+          item.verificationState === "unreadable" ||
+          item.completionState === "failed"
+          ? "unusable"
+          : "ready",
+      ),
+    }));
+  }
+
+  async function handleRefreshStudioIntake() {
+    setStudioIntake((current) => ({
+      ...current,
+      connection: "checking",
+      detail: "Refreshing Studio recordings.",
+    }));
+
+    try {
+      const discovery = await resolveStudioDiscovery();
+      const latestRecording = await fetchLatestStudioRecording(discovery);
+      setStudioIntake((current) => ({
+        ...current,
+        connection: "connected",
+        detail: latestRecording
+          ? `Found Studio recording ${extractSourceName(latestRecording.outputPath)}.`
+          : "Connected to Studio; no recent recording was available.",
+        apiUrl: discovery.apiUrl,
+        latestRecording: latestRecording ?? current.latestRecording,
+        recordings: enqueueStudioRecording(
+          current.recordings,
+          latestRecording,
+          {
+            source: "history",
+            ...studioPersistenceSets,
+          },
+        ),
+      }));
+    } catch (error) {
+      setStudioIntake((current) => ({
+        ...current,
+        connection: "unavailable",
+        detail:
+          error instanceof Error ? error.message : "Studio refresh failed.",
+      }));
+    }
+  }
+
   function applyPulseRecordingHandoff(handoff: PulseRecordingHandoff) {
     const recording: StudioRecordingCandidate = {
       sessionId: handoff.recording.sessionId,
@@ -1695,6 +1903,13 @@ function DesktopApp() {
       profileName: handoff.recording.profileName,
       captureMode: handoff.recording.captureMode ?? null,
       captureDetail: handoff.recording.captureDetail ?? null,
+      completionState: handoff.recording.completionState ?? null,
+      completionDetail: handoff.recording.completionDetail ?? null,
+      verificationState: handoff.recording.verificationState ?? null,
+      verificationDetail: handoff.recording.verificationDetail ?? null,
+      fileSizeBytes: handoff.recording.fileSizeBytes ?? null,
+      durationMs: handoff.recording.durationMs ?? null,
+      processStatus: handoff.recording.processStatus ?? null,
       stoppedAt: handoff.recording.stoppedAt,
       outputReadiness: handoff.outputReady ?? null,
     };
@@ -1711,6 +1926,7 @@ function DesktopApp() {
         source: "handoff",
         requestId: handoff.requestId,
         receivedAt: handoff.requestedAt,
+        ...studioPersistenceSets,
       }),
     }));
     setAnalysisError(null);
@@ -1832,6 +2048,15 @@ function DesktopApp() {
         projectSession.mediaSource.path
           ? studioRecordingQueueKey(studioIntake.latestRecording)
           : null;
+      if (exportedRecordingKey) {
+        setStudioIntakePersistence((current) =>
+          markStudioIntakePersistence(
+            current,
+            "exported",
+            exportedRecordingKey,
+          ),
+        );
+      }
       setStudioIntake((current) => ({
         ...current,
         connection: "connected",
@@ -2990,12 +3215,48 @@ function DesktopApp() {
                       : "Offline"}
                 </span>
               </div>
+              <div className="action-row">
+                {(
+                  [
+                    ["ready", "Ready"],
+                    ["needs-attention", "Needs attention"],
+                    ["imported", "Imported"],
+                    ["exported", "Exported"],
+                    ["hidden", "Hidden"],
+                  ] as Array<[StudioIntakeFilter, string]>
+                ).map(([filter, label]) => (
+                  <button
+                    className={
+                      studioIntakeFilter === filter
+                        ? "button-primary"
+                        : "button-secondary"
+                    }
+                    key={filter}
+                    onClick={() => setStudioIntakeFilter(filter)}
+                    type="button"
+                  >
+                    {label}
+                  </button>
+                ))}
+                <button
+                  className="button-secondary"
+                  onClick={() => {
+                    void handleRefreshStudioIntake();
+                  }}
+                  type="button"
+                >
+                  Refresh from Studio
+                </button>
+              </div>
               {studioIntake.recordings.length > 0 ? (
                 <div
                   className="studio-intake-queue"
                   data-testid="studio-intake-queue"
                 >
-                  {studioIntake.recordings.map((recording) => (
+                  {filteredStudioIntakeRecordings.length === 0 ? (
+                    <p>No Studio recordings match this filter.</p>
+                  ) : null}
+                  {filteredStudioIntakeRecordings.map((recording) => (
                     <div
                       className="studio-recording-card"
                       key={recording.queueId}
@@ -3024,6 +3285,30 @@ function DesktopApp() {
                       {recording.captureDetail ? (
                         <p>{recording.captureDetail}</p>
                       ) : null}
+                      <div className="studio-output-readiness">
+                        <span
+                          className={`analysis-readiness-pill ${studioIntakeStateTone(
+                            recording.state,
+                          )}`}
+                        >
+                          {studioRecordingCompletionLabel(recording)}
+                        </span>
+                        <span
+                          className={`analysis-readiness-pill ${
+                            recording.verificationState === "verified"
+                              ? "ready"
+                              : "blocked"
+                          }`}
+                        >
+                          {studioRecordingVerificationLabel(recording)}
+                        </span>
+                        <p>
+                          {recording.completionDetail ??
+                            recording.verificationDetail ??
+                            "Recording verification metadata is not available."}
+                        </p>
+                        <p>{studioRecordingSizeLabel(recording)}</p>
+                      </div>
                       {recording.outputReadiness ? (
                         <div className="studio-output-readiness">
                           <span
@@ -3045,12 +3330,35 @@ function DesktopApp() {
                       <div className="action-row">
                         <button
                           className="button-secondary"
-                          disabled={isAnalyzing || recording.state !== "ready"}
+                          disabled={
+                            isAnalyzing || !canImportStudioRecording(recording)
+                          }
                           onClick={() => handleImportStudioRecording(recording)}
                           type="button"
                         >
                           Import for review
                         </button>
+                        {recording.state === "dismissed" ? (
+                          <button
+                            className="button-secondary"
+                            onClick={() =>
+                              handleRestoreStudioRecording(recording)
+                            }
+                            type="button"
+                          >
+                            Restore
+                          </button>
+                        ) : (
+                          <button
+                            className="button-secondary"
+                            onClick={() =>
+                              handleDismissStudioRecording(recording)
+                            }
+                            type="button"
+                          >
+                            Dismiss
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -5467,6 +5775,25 @@ function resolveInitialThemeMode(): ThemeMode {
 
   const savedThemeMode = window.localStorage.getItem(themeModeStorageKey);
   return savedThemeMode === "light" ? "light" : "dark";
+}
+
+function loadStudioIntakePersistence(): StudioIntakePersistence {
+  if (typeof window === "undefined") {
+    return parseStudioIntakePersistence(null);
+  }
+  return parseStudioIntakePersistence(
+    window.localStorage.getItem(STUDIO_INTAKE_STORAGE_KEY),
+  );
+}
+
+function persistStudioIntakePersistence(persistence: StudioIntakePersistence) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.setItem(
+    STUDIO_INTAKE_STORAGE_KEY,
+    serializeStudioIntakePersistence(persistence),
+  );
 }
 
 function buildSuggestedSessionTitle(sourcePath: string): string {

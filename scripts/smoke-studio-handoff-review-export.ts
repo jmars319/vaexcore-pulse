@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { basename, extname } from "node:path";
 import { makeReviewDecision } from "@vaexcore/pulse-domain";
 import {
@@ -9,13 +10,25 @@ import {
 import { projectSessionSchema } from "@vaexcore/pulse-shared-types";
 import { createMockProjectSession } from "@vaexcore/pulse-shared-types/testing";
 import {
+  canImportStudioRecording,
   enqueueStudioRecording,
+  markStudioIntakePersistence,
+  parseStudioIntakePersistence,
+  restoreStudioIntakePersistence,
+  serializeStudioIntakePersistence,
+  studioIntakePersistenceSets,
   studioRecordingFromHistoryEntry,
   studioRecordingFromMessage,
+  studioRecordingQueueKey,
 } from "../apps/desktopapp/src/lib/studioIntegration.ts";
 
 const generatedAt = "2026-05-21T03:20:00.000Z";
-const validHandoff = {
+const handoffFileIndex = process.argv.indexOf("--handoff");
+const externalHandoff =
+  handoffFileIndex >= 0 && process.argv[handoffFileIndex + 1]
+    ? JSON.parse(readFileSync(process.argv[handoffFileIndex + 1], "utf8"))
+    : null;
+const validHandoff = externalHandoff ?? {
   schemaVersion: 1,
   requestId: "studio-handoff-smoke-001",
   sourceApp: "vaexcore-studio",
@@ -29,6 +42,15 @@ const validHandoff = {
     profileName: "1080p Local",
     captureMode: "display",
     captureDetail: "Main Display recorded as a source-backed display.",
+    completionState: "completed",
+    completionDetail:
+      "FFmpeg stopped after a quit signal. Output passed recording verification.",
+    verificationState: "verified",
+    verificationDetail:
+      "Recording file exists, is non-empty, and ffprobe metadata was read.",
+    fileSizeBytes: 360093,
+    durationMs: 2125,
+    processStatus: "exit status: 0",
     stoppedAt: generatedAt,
   },
   outputReady: {
@@ -158,6 +180,13 @@ const studioRecording = studioRecordingFromMessage(
       profile_name: validHandoff.recording.profileName,
       capture_mode: validHandoff.recording.captureMode,
       capture_detail: validHandoff.recording.captureDetail,
+      completion_state: validHandoff.recording.completionState,
+      completion_detail: validHandoff.recording.completionDetail,
+      verification_state: validHandoff.recording.verificationState,
+      verification_detail: validHandoff.recording.verificationDetail,
+      file_size_bytes: validHandoff.recording.fileSizeBytes,
+      duration_ms: validHandoff.recording.durationMs,
+      process_status: validHandoff.recording.processStatus,
     },
   }),
 );
@@ -168,6 +197,7 @@ assert.equal(
   studioRecording?.captureDetail,
   validHandoff.recording.captureDetail,
 );
+assert.equal(studioRecording?.verificationState, "verified");
 
 const historyRecording = studioRecordingFromHistoryEntry({
   session_id: validHandoff.recording.sessionId,
@@ -176,6 +206,13 @@ const historyRecording = studioRecordingFromHistoryEntry({
   profile_name: validHandoff.recording.profileName,
   capture_mode: validHandoff.recording.captureMode,
   capture_detail: validHandoff.recording.captureDetail,
+  completion_state: validHandoff.recording.completionState,
+  completion_detail: validHandoff.recording.completionDetail,
+  verification_state: validHandoff.recording.verificationState,
+  verification_detail: validHandoff.recording.verificationDetail,
+  file_size_bytes: validHandoff.recording.fileSizeBytes,
+  duration_ms: validHandoff.recording.durationMs,
+  process_status: validHandoff.recording.processStatus,
   stopped_at: validHandoff.recording.stoppedAt,
   output_readiness: validHandoff.outputReady,
 });
@@ -190,6 +227,9 @@ const intakeQueue = enqueueStudioRecording([], historyRecording, {
 });
 assert.equal(intakeQueue[0]?.state, "ready");
 assert.equal(intakeQueue[0]?.captureMode, "display");
+assert.equal(intakeQueue[0]?.completionState, "completed");
+assert.equal(intakeQueue[0]?.verificationState, "verified");
+assert.equal(canImportStudioRecording(intakeQueue[0]), true);
 assert.equal(
   enqueueStudioRecording(intakeQueue, historyRecording, {
     source: "history",
@@ -204,6 +244,51 @@ assert.equal(
     receivedAt: "2026-05-22T04:00:00.000Z",
   })[0]?.state,
   "stale",
+);
+
+const unusableRecording = studioRecordingFromHistoryEntry({
+  ...validHandoff.recording,
+  outputPath: validHandoff.recording.outputPath,
+  output_path: validHandoff.recording.outputPath,
+  session_id: "rec_unusable",
+  profile_id: validHandoff.recording.profileId,
+  profile_name: validHandoff.recording.profileName,
+  verification_state: "missing",
+  completion_state: "failed",
+  stopped_at: validHandoff.recording.stoppedAt,
+});
+const unusableQueue = enqueueStudioRecording([], unusableRecording, {
+  source: "history",
+  receivedAt: generatedAt,
+});
+assert.equal(unusableQueue[0]?.state, "unusable");
+assert.equal(canImportStudioRecording(unusableQueue[0]), false);
+
+const persistenceKey = studioRecordingQueueKey(historyRecording);
+let persistence = parseStudioIntakePersistence(null);
+persistence = markStudioIntakePersistence(
+  persistence,
+  "dismissed",
+  persistenceKey,
+  generatedAt,
+);
+const restoredPersistence = restoreStudioIntakePersistence(
+  persistence,
+  persistenceKey,
+);
+assert.equal(
+  studioIntakePersistenceSets(persistence).dismissedKeys.has(persistenceKey),
+  true,
+);
+assert.equal(
+  studioIntakePersistenceSets(restoredPersistence).dismissedKeys.has(
+    persistenceKey,
+  ),
+  false,
+);
+assert.deepEqual(
+  parseStudioIntakePersistence(serializeStudioIntakePersistence(persistence)),
+  persistence,
 );
 
 const baseSession = createMockProjectSession();
@@ -289,7 +374,12 @@ const edlExport = toEdlExport(
   reviewSession.candidates,
   reviewSession.reviewDecisions,
 );
-assert.match(edlExport, /TITLE: vaexcore pulse - source-aware-smoke\.mkv/);
+assert.match(
+  edlExport,
+  new RegExp(
+    `TITLE: vaexcore pulse - ${escapeRegExp(basename(validHandoff.recording.outputPath))}`,
+  ),
+);
 assert.match(edlExport, /\* COMMENT: Studio accepted opening moment/);
 assert.doesNotMatch(edlExport, /\* NO ACCEPTED MOMENTS/);
 assert.doesNotMatch(edlExport, /candidate_002|Not enough payoff/);
@@ -313,6 +403,10 @@ assert.deepEqual(
 );
 
 console.log("pulse studio handoff review export smoke passed");
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 function classifyHandoffFixture(
   rawFixture: string,
