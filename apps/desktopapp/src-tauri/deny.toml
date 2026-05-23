@@ -1,0 +1,23 @@
+# JAMARQ Rust advisory exceptions for cargo-deny.
+# Keep in sync with the central advisory decision record.
+
+[advisories]
+ignore = [
+  { id = "RUSTSEC-2024-0370", reason = "Exception expires 2026-08-21; see agentic-instructions/docs/security-advisory-decisions.md." },
+  { id = "RUSTSEC-2024-0411", reason = "Exception expires 2026-08-21; see agentic-instructions/docs/security-advisory-decisions.md." },
+  { id = "RUSTSEC-2024-0412", reason = "Exception expires 2026-08-21; see agentic-instructions/docs/security-advisory-decisions.md." },
+  { id = "RUSTSEC-2024-0413", reason = "Exception expires 2026-08-21; see agentic-instructions/docs/security-advisory-decisions.md." },
+  { id = "RUSTSEC-2024-0414", reason = "Exception expires 2026-08-21; see agentic-instructions/docs/security-advisory-decisions.md." },
+  { id = "RUSTSEC-2024-0415", reason = "Exception expires 2026-08-21; see agentic-instructions/docs/security-advisory-decisions.md." },
+  { id = "RUSTSEC-2024-0416", reason = "Exception expires 2026-08-21; see agentic-instructions/docs/security-advisory-decisions.md." },
+  { id = "RUSTSEC-2024-0417", reason = "Exception expires 2026-08-21; see agentic-instructions/docs/security-advisory-decisions.md." },
+  { id = "RUSTSEC-2024-0418", reason = "Exception expires 2026-08-21; see agentic-instructions/docs/security-advisory-decisions.md." },
+  { id = "RUSTSEC-2024-0419", reason = "Exception expires 2026-08-21; see agentic-instructions/docs/security-advisory-decisions.md." },
+  { id = "RUSTSEC-2024-0420", reason = "Exception expires 2026-08-21; see agentic-instructions/docs/security-advisory-decisions.md." },
+  { id = "RUSTSEC-2025-0057", reason = "Exception expires 2026-08-21; see agentic-instructions/docs/security-advisory-decisions.md." },
+  { id = "RUSTSEC-2025-0075", reason = "Exception expires 2026-08-21; see agentic-instructions/docs/security-advisory-decisions.md." },
+  { id = "RUSTSEC-2025-0080", reason = "Exception expires 2026-08-21; see agentic-instructions/docs/security-advisory-decisions.md." },
+  { id = "RUSTSEC-2025-0081", reason = "Exception expires 2026-08-21; see agentic-instructions/docs/security-advisory-decisions.md." },
+  { id = "RUSTSEC-2025-0098", reason = "Exception expires 2026-08-21; see agentic-instructions/docs/security-advisory-decisions.md." },
+  { id = "RUSTSEC-2025-0100", reason = "Exception expires 2026-08-21; see agentic-instructions/docs/security-advisory-decisions.md." },
+]

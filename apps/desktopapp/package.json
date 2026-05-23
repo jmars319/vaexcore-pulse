@@ -23,13 +23,13 @@
     "@vaexcore/pulse-shared-types": "workspace:*",
     "@vaexcore/pulse-storage": "workspace:*",
     "@vaexcore/pulse-ui": "workspace:*",
-    "@tauri-apps/api": "2.10.1",
-    "@tauri-apps/plugin-dialog": "2.6.0",
+    "@tauri-apps/api": "^2.11.0",
+    "@tauri-apps/plugin-dialog": "^2.7.1",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "2.10.1",
+    "@tauri-apps/cli": "^2.11.2",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.0",

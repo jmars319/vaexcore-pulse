@@ -1,0 +1,98 @@
+# JAMARQ security advisory exceptions. Keep in sync with agentic-instructions/docs/security-advisory-decisions.md.
+# Review on or before 2026-08-21.
+
+[[IgnoredVulns]]
+id = "GHSA-cq8v-f236-94qc"
+ignoreUntil = 2026-08-21
+reason = "Exception expires 2026-08-21; upstream Tauri 2 GTK3/build-time dependency path remains after direct dependency updates. See agentic-instructions/docs/security-advisory-decisions.md."
+
+[[IgnoredVulns]]
+id = "GHSA-wrw7-89jp-8q8g"
+ignoreUntil = 2026-08-21
+reason = "Exception expires 2026-08-21; upstream Tauri 2 GTK3/build-time dependency path remains after direct dependency updates. See agentic-instructions/docs/security-advisory-decisions.md."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0370"
+ignoreUntil = 2026-08-21
+reason = "Exception expires 2026-08-21; upstream Tauri 2 GTK3/build-time dependency path remains after direct dependency updates. See agentic-instructions/docs/security-advisory-decisions.md."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0411"
+ignoreUntil = 2026-08-21
+reason = "Exception expires 2026-08-21; upstream Tauri 2 GTK3/build-time dependency path remains after direct dependency updates. See agentic-instructions/docs/security-advisory-decisions.md."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0412"
+ignoreUntil = 2026-08-21
+reason = "Exception expires 2026-08-21; upstream Tauri 2 GTK3/build-time dependency path remains after direct dependency updates. See agentic-instructions/docs/security-advisory-decisions.md."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0413"
+ignoreUntil = 2026-08-21
+reason = "Exception expires 2026-08-21; upstream Tauri 2 GTK3/build-time dependency path remains after direct dependency updates. See agentic-instructions/docs/security-advisory-decisions.md."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0414"
+ignoreUntil = 2026-08-21
+reason = "Exception expires 2026-08-21; upstream Tauri 2 GTK3/build-time dependency path remains after direct dependency updates. See agentic-instructions/docs/security-advisory-decisions.md."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0415"
+ignoreUntil = 2026-08-21
+reason = "Exception expires 2026-08-21; upstream Tauri 2 GTK3/build-time dependency path remains after direct dependency updates. See agentic-instructions/docs/security-advisory-decisions.md."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0416"
+ignoreUntil = 2026-08-21
+reason = "Exception expires 2026-08-21; upstream Tauri 2 GTK3/build-time dependency path remains after direct dependency updates. See agentic-instructions/docs/security-advisory-decisions.md."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0417"
+ignoreUntil = 2026-08-21
+reason = "Exception expires 2026-08-21; upstream Tauri 2 GTK3/build-time dependency path remains after direct dependency updates. See agentic-instructions/docs/security-advisory-decisions.md."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0418"
+ignoreUntil = 2026-08-21
+reason = "Exception expires 2026-08-21; upstream Tauri 2 GTK3/build-time dependency path remains after direct dependency updates. See agentic-instructions/docs/security-advisory-decisions.md."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0419"
+ignoreUntil = 2026-08-21
+reason = "Exception expires 2026-08-21; upstream Tauri 2 GTK3/build-time dependency path remains after direct dependency updates. See agentic-instructions/docs/security-advisory-decisions.md."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0420"
+ignoreUntil = 2026-08-21
+reason = "Exception expires 2026-08-21; upstream Tauri 2 GTK3/build-time dependency path remains after direct dependency updates. See agentic-instructions/docs/security-advisory-decisions.md."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0057"
+ignoreUntil = 2026-08-21
+reason = "Exception expires 2026-08-21; upstream Tauri 2 GTK3/build-time dependency path remains after direct dependency updates. See agentic-instructions/docs/security-advisory-decisions.md."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0075"
+ignoreUntil = 2026-08-21
+reason = "Exception expires 2026-08-21; upstream Tauri 2 GTK3/build-time dependency path remains after direct dependency updates. See agentic-instructions/docs/security-advisory-decisions.md."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0080"
+ignoreUntil = 2026-08-21
+reason = "Exception expires 2026-08-21; upstream Tauri 2 GTK3/build-time dependency path remains after direct dependency updates. See agentic-instructions/docs/security-advisory-decisions.md."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0081"
+ignoreUntil = 2026-08-21
+reason = "Exception expires 2026-08-21; upstream Tauri 2 GTK3/build-time dependency path remains after direct dependency updates. See agentic-instructions/docs/security-advisory-decisions.md."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0098"
+ignoreUntil = 2026-08-21
+reason = "Exception expires 2026-08-21; upstream Tauri 2 GTK3/build-time dependency path remains after direct dependency updates. See agentic-instructions/docs/security-advisory-decisions.md."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0100"
+ignoreUntil = 2026-08-21
+reason = "Exception expires 2026-08-21; upstream Tauri 2 GTK3/build-time dependency path remains after direct dependency updates. See agentic-instructions/docs/security-advisory-decisions.md."
+
