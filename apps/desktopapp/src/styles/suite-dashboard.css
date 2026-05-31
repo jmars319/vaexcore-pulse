@@ -1,0 +1,60 @@
+.suite-launch-status {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.suite-dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.28fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.suite-session-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.suite-panel-wide {
+  grid-column: 2;
+}
+
+.suite-status-list,
+.suite-timeline-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.suite-status-row,
+.suite-timeline-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-left: 3px solid var(--accent);
+  border-radius: var(--vxc-radius-small);
+  background: var(--surface-recessed);
+}
+
+.suite-timeline-row {
+  border-left-color: var(--accent-gradient-end);
+}
+
+.suite-status-row strong,
+.suite-status-row span,
+.suite-status-row code,
+.suite-timeline-row strong,
+.suite-timeline-row span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.suite-status-row code {
+  margin-top: 4px;
+  color: var(--text-dimmer);
+  font-size: 0.75rem;
+}

@@ -1,0 +1,357 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--app-background);
+  color: var(--text-color);
+}
+
+button,
+input,
+select,
+summary,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  padding: 32px;
+}
+
+.background-orb {
+  display: none;
+}
+
+.background-orb-left {
+  width: 320px;
+  height: 320px;
+  left: -120px;
+  top: 140px;
+  background: var(--orb-left);
+}
+
+.background-orb-right {
+  width: 420px;
+  height: 420px;
+  right: -150px;
+  top: 260px;
+  background: var(--orb-right);
+}
+
+.glass-panel,
+.hero-panel {
+  position: relative;
+  backdrop-filter: blur(18px);
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--shadow);
+}
+
+.workspace-header {
+  border-radius: var(--vxc-radius);
+  padding: 18px 22px;
+  animation: rise 520ms ease-out both;
+}
+
+.workspace-header-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.workspace-title {
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  line-height: 1;
+  max-width: 14ch;
+  text-wrap: balance;
+}
+
+.workspace-copy {
+  max-width: 46ch;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.workspace-status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.hero-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(340px, 0.95fr);
+  gap: 24px;
+  border-radius: var(--vxc-radius);
+  padding: 24px 28px;
+  animation: rise 520ms ease-out both;
+}
+
+.eyebrow {
+  margin: 0 0 10px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.76rem;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+h1 {
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  line-height: 0.95;
+}
+
+.hero-title {
+  font-size: clamp(2rem, 3vw, 2.8rem);
+  line-height: 1;
+  max-width: 12ch;
+  text-wrap: balance;
+}
+
+h2 {
+  font-size: 1.7rem;
+}
+
+h3 {
+  font-size: 1.1rem;
+}
+
+.hero-copy {
+  max-width: 42ch;
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 0.98rem;
+}
+
+.hero-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.stat-card {
+  border-radius: var(--vxc-radius);
+  padding: 14px 16px;
+  background: var(--surface-card);
+  border: 1px solid var(--surface-card-border);
+}
+
+.stat-card.compact {
+  padding: 12px 14px;
+}
+
+.hero-meta .hero-actions {
+  grid-column: 1 / -1;
+}
+
+.path-card strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stat-card p {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.stat-label,
+.detail-label,
+.input-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-subtle);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero-actions,
+.action-row,
+.filter-row,
+.label-editor-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.button-primary,
+.button-secondary,
+.button-danger,
+.filter-chip {
+  border: 0;
+  border-radius: var(--vxc-radius-small);
+  padding: 10px 14px;
+  transition:
+    transform 160ms ease,
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.button-primary {
+  background: linear-gradient(
+    120deg,
+    var(--accent) 0%,
+    var(--accent-gradient-end) 100%
+  );
+  color: var(--button-primary-text);
+  font-weight: 700;
+}
+
+.button-secondary {
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  border: 1px solid var(--button-secondary-border);
+}
+
+.button-danger {
+  background: var(--button-danger-bg);
+  color: var(--button-danger-text);
+  border: 1px solid var(--button-danger-border);
+}
+
+.button-primary:hover,
+.button-secondary:hover,
+.button-danger:hover,
+.filter-chip:hover,
+.candidate-card:hover {
+  transform: translateY(-1px);
+}
+
+.settings-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--button-secondary-border);
+  border-radius: var(--vxc-radius-small);
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.settings-icon-button:hover {
+  transform: translateY(-1px);
+  border-color: var(--active-border);
+  color: var(--accent);
+}
+
+.settings-icon-button svg {
+  display: block;
+}
+
+.utility-panel,
+.queue-panel,
+.detail-panel {
+  border-radius: var(--vxc-radius);
+  padding: 22px;
+  animation: rise 560ms ease-out both;
+}
+
+.panel-header,
+.section-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+}
+
+.compact-panel-header {
+  align-items: flex-start;
+}
+
+.utility-block,
+.detail-card,
+.breakdown-panel,
+.completion-panel,
+.review-panel,
+.export-panel {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: var(--vxc-radius);
+  background: var(--surface-card);
+  border: 1px solid var(--surface-card-border);
+}
+
+.plain-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.plain-list li {
+  color: var(--muted);
+}
+
+.plain-list strong {
+  display: block;
+  color: var(--text-strong);
+}
+
+.plain-list span {
+  display: block;
+  color: var(--muted);
+}
+
+.search-block {
+  display: block;
+  margin-top: 16px;
+}
+
+.search-input,
+.label-editor input {
+  width: 100%;
+  border-radius: var(--vxc-radius-small);
+  border: 1px solid var(--surface-input-border);
+  background: var(--surface-input);
+  color: var(--text-strong);
+  padding: 12px 14px;
+}
+
+.profile-textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.analysis-form {
+  display: grid;
+  gap: 12px;
+}

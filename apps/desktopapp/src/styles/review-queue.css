@@ -1,0 +1,262 @@
+.review-status,
+.review-error {
+  margin: 8px 0 0;
+}
+
+.review-error {
+  color: var(--error-text);
+}
+
+.search-block small {
+  display: block;
+  margin-top: 8px;
+  color: var(--text-dimmer);
+}
+
+.filter-row {
+  margin-top: 14px;
+}
+
+.filter-chip {
+  background: var(--surface-soft);
+  color: var(--text-color);
+}
+
+.filter-chip.active {
+  background: var(--filter-active-bg);
+  color: var(--filter-active-text);
+}
+
+.candidate-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.queue-empty-state {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: var(--surface-empty);
+  border: 1px dashed var(--surface-empty-border);
+}
+
+.candidate-list-item.demoted {
+  opacity: 0.82;
+}
+
+.candidate-list-item-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.candidate-preview-button {
+  white-space: nowrap;
+}
+
+.candidate-card {
+  width: 100%;
+  text-align: left;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid var(--surface-card-border);
+  background:
+    linear-gradient(
+      180deg,
+      var(--surface-candidate-start),
+      var(--surface-candidate-end)
+    ),
+    var(--surface-candidate-base);
+  color: inherit;
+  animation: rise 480ms ease-out both;
+}
+
+.candidate-card.selected {
+  border-color: var(--active-border);
+  box-shadow: inset 0 0 0 1px var(--active-shadow);
+}
+
+.candidate-card-top,
+.candidate-bottom {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.candidate-label {
+  display: block;
+  margin-top: 14px;
+  font-size: 1.08rem;
+}
+
+.candidate-summary,
+.candidate-transcript,
+.detail-card p,
+.utility-block p {
+  margin: 10px 0 0;
+  color: var(--muted);
+}
+
+.candidate-transcript {
+  font-style: italic;
+  color: var(--text-strong);
+}
+
+.candidate-score,
+.candidate-time,
+.queue-count,
+.score-pill {
+  color: var(--text-subtle);
+}
+
+.queue-action {
+  white-space: nowrap;
+}
+
+.band-pill,
+.decision-pill,
+.score-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.band-pill.high {
+  background: var(--tone-magenta-bg);
+  color: var(--tone-magenta-text);
+}
+
+.band-pill.medium {
+  background: var(--tone-cyan-bg);
+  color: var(--tone-cyan-text);
+}
+
+.band-pill.low {
+  background: var(--tone-success-bg);
+  color: var(--tone-success-text);
+}
+
+.band-pill.experimental {
+  background: var(--tone-violet-bg);
+  color: var(--tone-violet-text);
+}
+
+.decision-pill,
+.score-pill {
+  background: var(--surface-neutral-pill);
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.detail-card {
+  min-width: 0;
+}
+
+.detail-card.narrative-card {
+  grid-column: 1 / -1;
+}
+
+.review-context-card {
+  margin-top: 0;
+}
+
+.breakdown-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.internal-details {
+  overflow: hidden;
+}
+
+.internal-details-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.internal-details-summary::-webkit-details-marker {
+  display: none;
+}
+
+.internal-details[open] .internal-details-summary {
+  margin-bottom: 14px;
+}
+
+.review-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.review-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--button-danger-bg);
+  border: 1px solid var(--button-danger-border);
+  color: var(--button-danger-text);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
+.detail-header-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 10px;
+  align-items: center;
+}
+
+.review-panel-primary .vcp-block {
+  margin-top: 12px;
+}
+
+.review-panel-primary .action-row {
+  margin-top: 12px;
+}
+
+.preview-launch-panel {
+  margin-top: 18px;
+}
+
+.review-label-editor {
+  margin-top: 14px;
+}
+
+.completion-export-details,
+.nested-export-details {
+  margin-top: 14px;
+}
+
+.review-shortcut-list {
+  margin-top: 10px;
+}
+
+.review-shortcut-list strong {
+  min-width: 52px;
+}
+
+.review-timeline-details .timeline-panel {
+  margin-top: 0;
+}

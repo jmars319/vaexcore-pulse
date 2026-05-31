@@ -1,0 +1,141 @@
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1280px) {
+  .analysis-summary-grid,
+  .session-overview-grid,
+  .session-overview-strip,
+  .detail-grid,
+  .moment-preview-grid,
+  .reference-primary-grid,
+  .workspace-status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .context-peek-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .app-shell {
+    padding: 18px;
+  }
+
+  .workspace-header {
+    padding: 18px;
+  }
+
+  .workspace-header-main {
+    align-items: stretch;
+  }
+
+  .hero-panel {
+    grid-template-columns: 1fr;
+    padding: 24px;
+  }
+
+  .workspace-status-grid,
+  .suite-dashboard-grid,
+  .hero-meta,
+  .analysis-launch-layout,
+  .analysis-inline-grid,
+  .settings-compact-grid.two-column,
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .suite-panel-wide {
+    grid-column: auto;
+  }
+
+  .suite-status-row,
+  .suite-timeline-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .profile-setup-toolbar {
+    display: grid;
+  }
+
+  .settings-section-nav {
+    position: static;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .analysis-header-actions {
+    justify-content: flex-start;
+  }
+
+  .utility-panel,
+  .queue-panel,
+  .detail-panel {
+    padding: 18px;
+  }
+
+  .moment-preview-backdrop {
+    padding: 14px;
+  }
+
+  .moment-preview-dialog {
+    width: min(100vw - 28px, 1100px);
+    max-height: calc(100vh - 28px);
+    padding: 18px;
+  }
+}
+
+@media (max-width: 620px) {
+  .settings-section-nav {
+    grid-template-columns: 1fr;
+  }
+}
+
+.desktop-review-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.2fr);
+  gap: 22px;
+}
+
+.review-queue-state-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--surface-recessed);
+  border: 1px solid var(--surface-card-border);
+}
+
+.review-queue-state-strip strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-strong);
+}
+
+.review-queue-state-strip p {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.desktop-review-stack,
+.desktop-placeholder-grid,
+.desktop-aside-stack {
+  display: grid;
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.ordered {
+  list-style: decimal;
+}

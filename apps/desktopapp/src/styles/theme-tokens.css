@@ -1,0 +1,165 @@
+:root {
+  color-scheme: dark;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  --brand-cyan-rgb: 57, 217, 255;
+  --brand-magenta-rgb: 255, 59, 244;
+  --brand-blue-rgb: 143, 92, 255;
+  --app-background: var(--vxc-bg), var(--vxc-grid), var(--vxc-ink-950);
+  --text-color: var(--vxc-text);
+  --text-strong: var(--vxc-text-strong);
+  --text-subtle: var(--vxc-text-muted);
+  --text-faint: var(--vxc-text-soft);
+  --text-dimmer: rgba(174, 184, 212, 0.58);
+  --panel: var(--vxc-panel-bg);
+  --panel-border: var(--vxc-border);
+  --panel-strong: var(--vxc-panel-bg-strong);
+  --accent: var(--vxc-cyan);
+  --accent-gradient-end: var(--vxc-magenta);
+  --danger: var(--vxc-danger);
+  --muted: var(--vxc-text-muted);
+  --shadow: var(--vxc-shadow);
+  --orb-left: transparent;
+  --orb-right: transparent;
+  --surface-card: var(--vxc-panel-bg-soft);
+  --surface-card-border: var(--vxc-border);
+  --surface-input: var(--vxc-field-bg);
+  --surface-input-border: var(--vxc-border);
+  --surface-recessed: rgba(3, 5, 18, 0.28);
+  --surface-recessed-strong: rgba(3, 5, 18, 0.36);
+  --surface-soft: rgba(98, 217, 255, 0.07);
+  --surface-soft-strong: rgba(201, 63, 215, 0.1);
+  --surface-empty: rgba(98, 217, 255, 0.045);
+  --surface-empty-border: rgba(167, 202, 255, 0.16);
+  --surface-candidate-start: rgba(98, 217, 255, 0.075);
+  --surface-candidate-end: rgba(201, 63, 215, 0.035);
+  --surface-candidate-base: rgba(5, 7, 22, 0.68);
+  --surface-track-border: rgba(167, 202, 255, 0.12);
+  --surface-track-start: rgba(98, 217, 255, 0.035);
+  --surface-track-mid: rgba(201, 63, 215, 0.08);
+  --surface-track-grid: rgba(167, 202, 255, 0.06);
+  --surface-neutral-pill: rgba(238, 244, 255, 0.07);
+  --surface-neutral-pill-strong: rgba(238, 244, 255, 0.1);
+  --surface-tooltip: rgba(5, 7, 22, 0.9);
+  --surface-code: rgba(3, 5, 18, 0.36);
+  --timeline-marker-neutral: rgba(238, 244, 255, 0.18);
+  --timeline-segment: rgba(238, 244, 255, 0.78);
+  --timeline-selected-ring: rgba(225, 168, 255, 0.84);
+  --button-primary-text: #04111f;
+  --button-secondary-bg: rgba(98, 217, 255, 0.075);
+  --button-secondary-text: #eff8ff;
+  --button-secondary-border: rgba(167, 202, 255, 0.14);
+  --button-danger-bg: rgba(255, 127, 150, 0.14);
+  --button-danger-text: #ffd1da;
+  --button-danger-border: rgba(255, 127, 150, 0.3);
+  --error-bg: rgba(255, 127, 150, 0.12);
+  --error-text: #ffd1da;
+  --filter-active-bg: rgba(201, 63, 215, 0.18);
+  --filter-active-text: #fac6ff;
+  --active-border: rgba(98, 217, 255, 0.42);
+  --active-shadow: rgba(201, 63, 215, 0.2);
+  --tone-cyan-bg: rgba(66, 173, 230, 0.18);
+  --tone-cyan-border: rgba(66, 173, 230, 0.28);
+  --tone-cyan-text: #b8eeff;
+  --tone-magenta-bg: rgba(201, 63, 215, 0.16);
+  --tone-magenta-border: rgba(201, 63, 215, 0.28);
+  --tone-magenta-text: #fac6ff;
+  --tone-violet-bg: rgba(126, 101, 255, 0.16);
+  --tone-violet-border: rgba(126, 101, 255, 0.28);
+  --tone-violet-text: #d8d0ff;
+  --tone-success-bg: rgba(102, 217, 184, 0.14);
+  --tone-success-border: rgba(102, 217, 184, 0.26);
+  --tone-success-text: #c9f8e9;
+  --tone-danger-bg: rgba(255, 127, 150, 0.14);
+  --tone-danger-border: rgba(255, 127, 150, 0.3);
+  background: var(--app-background);
+  color: var(--text-color);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --app-background:
+    radial-gradient(
+      circle at top left,
+      rgba(var(--brand-cyan-rgb), 0.18),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at top right,
+      rgba(var(--brand-magenta-rgb), 0.12),
+      transparent 26%
+    ),
+    radial-gradient(
+      circle at 52% -10%,
+      rgba(var(--brand-blue-rgb), 0.08),
+      transparent 42%
+    ),
+    linear-gradient(160deg, #f5f8ff 0%, #eef4ff 52%, #fbf7ff 100%);
+  --text-color: #182039;
+  --text-strong: #11172c;
+  --text-subtle: rgba(24, 32, 57, 0.72);
+  --text-faint: rgba(24, 32, 57, 0.62);
+  --text-dimmer: rgba(24, 32, 57, 0.56);
+  --panel: rgba(255, 255, 255, 0.78);
+  --panel-border: rgba(60, 72, 136, 0.16);
+  --panel-strong: rgba(255, 255, 255, 0.94);
+  --accent: #007ca8;
+  --accent-gradient-end: #a22caf;
+  --danger: #b93651;
+  --muted: #4f5875;
+  --shadow: 0 24px 64px rgba(20, 24, 58, 0.14);
+  --orb-left: rgba(var(--brand-cyan-rgb), 0.16);
+  --orb-right: rgba(var(--brand-magenta-rgb), 0.12);
+  --surface-card: rgba(255, 255, 255, 0.72);
+  --surface-card-border: rgba(24, 32, 57, 0.12);
+  --surface-input: rgba(255, 255, 255, 0.92);
+  --surface-input-border: rgba(24, 32, 57, 0.16);
+  --surface-recessed: rgba(245, 248, 255, 0.82);
+  --surface-recessed-strong: rgba(255, 255, 255, 0.88);
+  --surface-soft: rgba(36, 63, 120, 0.06);
+  --surface-soft-strong: rgba(132, 42, 160, 0.09);
+  --surface-empty: rgba(255, 255, 255, 0.58);
+  --surface-empty-border: rgba(24, 32, 57, 0.14);
+  --surface-candidate-start: rgba(255, 255, 255, 0.94);
+  --surface-candidate-end: rgba(246, 241, 255, 0.78);
+  --surface-candidate-base: rgba(249, 251, 255, 0.96);
+  --surface-track-border: rgba(24, 32, 57, 0.12);
+  --surface-track-start: rgba(0, 124, 168, 0.035);
+  --surface-track-mid: rgba(162, 44, 175, 0.065);
+  --surface-track-grid: rgba(24, 32, 57, 0.05);
+  --surface-neutral-pill: rgba(24, 32, 57, 0.08);
+  --surface-neutral-pill-strong: rgba(24, 32, 57, 0.12);
+  --surface-tooltip: rgba(255, 255, 255, 0.96);
+  --surface-code: rgba(255, 255, 255, 0.86);
+  --timeline-marker-neutral: rgba(24, 32, 57, 0.18);
+  --timeline-segment: rgba(255, 255, 255, 0.98);
+  --timeline-selected-ring: rgba(133, 47, 167, 0.28);
+  --button-primary-text: #f8fbff;
+  --button-secondary-bg: rgba(255, 255, 255, 0.84);
+  --button-secondary-text: #182039;
+  --button-secondary-border: rgba(24, 32, 57, 0.12);
+  --button-danger-bg: rgba(185, 54, 81, 0.1);
+  --button-danger-text: #8e263b;
+  --button-danger-border: rgba(185, 54, 81, 0.24);
+  --error-bg: rgba(185, 54, 81, 0.1);
+  --error-text: #8e263b;
+  --filter-active-bg: rgba(162, 44, 175, 0.12);
+  --filter-active-text: #70218c;
+  --active-border: rgba(0, 124, 168, 0.34);
+  --active-shadow: rgba(162, 44, 175, 0.14);
+  --tone-cyan-bg: rgba(0, 124, 168, 0.12);
+  --tone-cyan-border: rgba(0, 124, 168, 0.22);
+  --tone-cyan-text: #005c82;
+  --tone-magenta-bg: rgba(162, 44, 175, 0.12);
+  --tone-magenta-border: rgba(162, 44, 175, 0.22);
+  --tone-magenta-text: #70218c;
+  --tone-violet-bg: rgba(86, 72, 185, 0.12);
+  --tone-violet-border: rgba(86, 72, 185, 0.22);
+  --tone-violet-text: #4731a3;
+  --tone-success-bg: rgba(44, 137, 113, 0.12);
+  --tone-success-border: rgba(44, 137, 113, 0.22);
+  --tone-success-text: #236d5c;
+  --tone-danger-bg: rgba(185, 54, 81, 0.1);
+  --tone-danger-border: rgba(185, 54, 81, 0.24);
+}

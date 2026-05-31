@@ -1,0 +1,96 @@
+.completion-panel {
+  border-color: var(--tone-success-border);
+  background:
+    linear-gradient(180deg, var(--tone-success-bg), rgba(255, 255, 255, 0.03)),
+    rgba(255, 255, 255, 0.02);
+}
+
+.moment-preview-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: rgba(3, 4, 17, 0.74);
+  backdrop-filter: blur(10px);
+}
+
+.moment-preview-dialog {
+  width: min(1100px, calc(100vw - 56px));
+  max-height: calc(100vh - 56px);
+  overflow: auto;
+  padding: 22px;
+  border-radius: 28px;
+}
+
+.moment-preview-header,
+.moment-preview-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: start;
+  flex-wrap: wrap;
+}
+
+.moment-preview-copy {
+  margin: 10px 0 0;
+  color: var(--muted);
+}
+
+.moment-preview-toolbar {
+  margin-top: 16px;
+}
+
+.moment-preview-mode-row {
+  margin-top: 0;
+}
+
+.moment-preview-action-row {
+  margin-top: 0;
+}
+
+.moment-preview-frame {
+  margin-top: 18px;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid var(--surface-card-border);
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.moment-preview-placeholder {
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  min-height: 320px;
+  padding: 28px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.moment-preview-placeholder strong {
+  color: var(--text-strong);
+}
+
+.moment-preview-placeholder p {
+  max-width: 520px;
+  margin: 0;
+}
+
+.moment-preview-video {
+  display: block;
+  width: 100%;
+  max-height: 62vh;
+  background: #03051a;
+}
+
+.moment-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.moment-preview-feedback {
+  margin-top: 12px;
+}

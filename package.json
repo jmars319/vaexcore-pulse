@@ -9,7 +9,7 @@
   },
   "scripts": {
     "bootstrap": "bash ./scripts/bootstrap.sh",
-    "ci": "pnpm run lint && pnpm build:service-bundle && pnpm run check:service-bundle && pnpm run typecheck && pnpm test && pnpm run smoke:studio && (cd apps/desktopapp/src-tauri && cargo fmt --all -- --check && cargo clippy --all-targets -- -D warnings && cargo test)",
+    "ci": "pnpm run lint && pnpm build:service-bundle && pnpm run check:service-bundle && pnpm run typecheck && pnpm test && pnpm run smoke:studio && (cd apps/desktopapp/src-tauri && cargo fmt --all -- --check && cargo clippy --all-targets -- -D warnings && cargo test) && npm run audit:maintainability && npm run budget:bundle",
     "check:env": "bash ./scripts/check-env.sh",
     "check:packages": "bash ./scripts/check-packages.sh",
     "dev:web": "bash ./scripts/dev-web.sh",
@@ -44,7 +44,10 @@
     "verify:api": "bash ./scripts/verify-api.sh",
     "verify:all": "bash ./scripts/verify-all.sh",
     "health": "bash ./scripts/doctor.sh",
-    "doctor": "bash ./scripts/doctor.sh"
+    "doctor": "bash ./scripts/doctor.sh",
+    "analyze:bundle": "node scripts/analyze-build.mjs",
+    "budget:bundle": "node scripts/analyze-build.mjs --strict",
+    "audit:maintainability": "node scripts/audit-maintainability.mjs --strict"
   },
   "devDependencies": {
     "@types/node": "25.5.0",
@@ -52,5 +55,10 @@
     "prettier": "3.8.1",
     "tsx": "4.21.0",
     "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "@vaexcore/pulse-domain": "workspace:*",
+    "@vaexcore/pulse-export": "workspace:*",
+    "@vaexcore/pulse-shared-types": "workspace:*"
   }
 }

@@ -28,6 +28,16 @@ overrides:
 
 importers:
   .:
+    dependencies:
+      "@vaexcore/pulse-domain":
+        specifier: workspace:*
+        version: link:packages/domain
+      "@vaexcore/pulse-export":
+        specifier: workspace:*
+        version: link:packages/export
+      "@vaexcore/pulse-shared-types":
+        specifier: workspace:*
+        version: link:packages/shared-types
     devDependencies:
       "@types/node":
         specifier: 25.5.0

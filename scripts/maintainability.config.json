@@ -1,0 +1,20 @@
+{
+  "label": "vaexcore-pulse",
+  "maxImplementationFileLines": 1800,
+  "maxStyleFileLines": 450,
+  "maxAppShellLines": 600,
+  "maxDesktopMainLines": 1800,
+  "maxDomainBarrelLines": 250,
+  "initialBundleBudgetKb": 400,
+  "ignoredSegments": [],
+  "allowedGenerated": [
+    "src/vite-env.d.ts",
+    "src/atlasDesktop.d.ts",
+    "src/marketDeskDesktop.d.ts",
+    "apps/webapp/next-env.d.ts",
+    "apps/desktopapp/src/vite-env.d.ts",
+    "apps/webapp/src/vite-env.d.ts",
+    "apps/desktop/src/vite-env.d.ts"
+  ],
+  "ignoredPathIncludes": ["apps/desktopapp/src-tauri/resources"]
+}
