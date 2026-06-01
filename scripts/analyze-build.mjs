@@ -11,6 +11,8 @@ const config = fs.existsSync(configPath)
 const budgetBytes =
   Number(process.env.BUNDLE_BUDGET_KB ?? config.initialBundleBudgetKb ?? 450) *
   1024;
+const routeChunkBudgets = config.routeChunkBudgets ?? [];
+const bundleBaselineKb = config.bundleBaselineKb ?? {};
 const candidateAssetDirs = config.assetDirs ?? [
   "dist/assets",
   "build/assets",
@@ -71,7 +73,7 @@ const initialPattern = config.initialChunkPattern
   : /(^|\/)index-[\w-]+\.js$/;
 const initial =
   sorted.find((asset) => initialPattern.test(asset.file)) ?? sorted[0];
-console.log((config.label ?? path.basename(root)) + " web bundle report");
+console.log((config.label ?? path.basename(root)) + " bundle report");
 console.log(
   "Initial/largest route chunk: " +
     initial.file +
@@ -95,6 +97,75 @@ for (const asset of sorted.slice(0, 12))
       " kB gzip",
   );
 
+function chunkDeltaLabel(name, rawKb) {
+  const baseline = Number(bundleBaselineKb[name]);
+  if (!Number.isFinite(baseline) || baseline <= 0) return "";
+  const delta = rawKb - baseline;
+  const prefix = delta >= 0 ? "+" : "";
+  return " (" + prefix + delta.toFixed(2) + " kB vs baseline)";
+}
+
+const chunkViolations = [];
+if (routeChunkBudgets.length > 0) {
+  console.log("");
+  console.log("Route chunk budgets:");
+  for (const budget of routeChunkBudgets) {
+    const name = budget.name ?? budget.pattern;
+    const pattern = new RegExp(budget.pattern);
+    const maxBytes = Number(budget.maxKb) * 1024;
+    const matches = sorted.filter((asset) => pattern.test(asset.file));
+    if (matches.length === 0) {
+      chunkViolations.push(
+        "Missing route chunk for " +
+          name +
+          " using pattern " +
+          budget.pattern +
+          ".",
+      );
+      console.log("- " + name + ": missing");
+      continue;
+    }
+    const asset = matches[0];
+    const rawKb = asset.rawBytes / 1024;
+    const gzipKb = asset.gzipBytes / 1024;
+    console.log(
+      "- " +
+        name +
+        ": " +
+        rawKb.toFixed(2) +
+        " kB raw / " +
+        gzipKb.toFixed(2) +
+        " kB gzip, target " +
+        Number(budget.maxKb).toFixed(0) +
+        " kB" +
+        chunkDeltaLabel(name, rawKb),
+    );
+    if (maxBytes > 0 && asset.rawBytes > maxBytes) {
+      chunkViolations.push(
+        name +
+          " chunk exceeds target by " +
+          ((asset.rawBytes - maxBytes) / 1024).toFixed(2) +
+          " kB (" +
+          asset.file +
+          ").",
+      );
+    } else if (
+      maxBytes > 0 &&
+      maxBytes - asset.rawBytes <=
+        Number(config.nearChunkBudgetWarningKb ?? 4) * 1024
+    ) {
+      console.warn(
+        name +
+          " chunk is near target: " +
+          rawKb.toFixed(2) +
+          "/" +
+          Number(budget.maxKb).toFixed(0) +
+          " kB raw.",
+      );
+    }
+  }
+}
+
 if (initial.rawBytes > budgetBytes) {
   const message =
     "Initial/largest route chunk exceeds target by " +
@@ -105,4 +176,9 @@ if (initial.rawBytes > budgetBytes) {
     process.exit(1);
   }
   console.warn(message);
+}
+
+if (chunkViolations.length > 0) {
+  for (const violation of chunkViolations) console.error(violation);
+  if (strict) process.exit(1);
 }

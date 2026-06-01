@@ -1,12 +1,186 @@
 {
   "label": "vaexcore-pulse",
-  "maxImplementationFileLines": 1800,
-  "maxStyleFileLines": 450,
-  "maxAppShellLines": 600,
-  "maxDesktopMainLines": 1800,
+  "maxImplementationFileLines": 535,
+  "maxStyleFileLines": 390,
+  "maxAppShellLines": 120,
+  "maxDesktopMainLines": 450,
   "maxDomainBarrelLines": 250,
-  "initialBundleBudgetKb": 400,
+  "initialBundleBudgetKb": 205,
+  "initialChunkPattern": "apps/desktopapp/dist/assets/index-.*\\.js$",
+  "nearLineBudgetWarningLines": 10,
+  "nearChunkBudgetWarningKb": 4,
+  "nearAssetBudgetWarningKb": 16,
+  "bundleBaselineKb": {
+    "desktopInitial": 196.05,
+    "DesktopApp": 60.73,
+    "themeMode": 96.23,
+    "ReviewWorkspacePage": 32.72,
+    "SettingsWindowApp": 16.64,
+    "NewAnalysisPage": 11.09,
+    "MomentPreviewModal": 7.11,
+    "webInitial": 280.34
+  },
+  "routeChunkBudgets": [
+    {
+      "name": "DesktopApp",
+      "pattern": "apps/desktopapp/dist/assets/DesktopApp-.*\\.js$",
+      "maxKb": 70
+    },
+    {
+      "name": "themeMode",
+      "pattern": "apps/desktopapp/dist/assets/themeMode-.*\\.js$",
+      "maxKb": 105
+    },
+    {
+      "name": "ReviewWorkspacePage",
+      "pattern": "apps/desktopapp/dist/assets/ReviewWorkspacePage-.*\\.js$",
+      "maxKb": 38
+    },
+    {
+      "name": "SettingsWindowApp",
+      "pattern": "apps/desktopapp/dist/assets/SettingsWindowApp-.*\\.js$",
+      "maxKb": 22
+    },
+    {
+      "name": "NewAnalysisPage",
+      "pattern": "apps/desktopapp/dist/assets/NewAnalysisPage-.*\\.js$",
+      "maxKb": 16
+    },
+    {
+      "name": "MomentPreviewModal",
+      "pattern": "apps/desktopapp/dist/assets/MomentPreviewModal-.*\\.js$",
+      "maxKb": 11
+    },
+    {
+      "name": "webInitial",
+      "pattern": "apps/webapp/dist/assets/index-.*\\.js$",
+      "maxKb": 290
+    }
+  ],
+  "specificFileLineBudgets": {
+    "apps/desktopapp/src/AppRoot.tsx": 60,
+    "apps/desktopapp/src/DesktopApp.tsx": 350,
+    "apps/desktopapp/src/components/DesktopWorkspaceFrame.tsx": 325,
+    "apps/desktopapp/src/hooks/useReviewWorkspaceController.ts": 525,
+    "apps/desktopapp/src-tauri/src/suite_runtime/discovery.rs": 535,
+    "apps/webapp/src/App.tsx": 535,
+    "apps/mobileapp/src/App.tsx": 535,
+    "scripts/audit-maintainability.mjs": 700,
+    "services/api/src/tests/mediaLibraryRouteFixture.ts": 535
+  },
+  "startupImportRules": [
+    {
+      "file": "apps/desktopapp/src/AppRoot.tsx",
+      "blockedPatterns": [
+        "./components/ReviewWorkspacePage",
+        "./components/NewAnalysisPage",
+        "./components/ProjectsBacklogPage",
+        "./components/SuiteWorkspacePage",
+        "./components/ProfileWorkspace",
+        "./components/StudioIntakePanel",
+        "./lib/studioIntegration",
+        "./lib/pulseApiClient"
+      ]
+    },
+    {
+      "file": "apps/desktopapp/src/DesktopApp.tsx",
+      "blockedPatterns": [
+        "./components/ReviewWorkspacePage",
+        "./components/NewAnalysisPage",
+        "./components/ProjectsBacklogPage",
+        "./components/SuiteWorkspacePage",
+        "./components/ProfileWorkspace",
+        "./components/StudioIntakePanel",
+        "./lib/studioIntegration"
+      ]
+    },
+    {
+      "file": "apps/desktopapp/src/components/DesktopRouteRenderer.tsx",
+      "blockedPatterns": [
+        "../lib/pulseApiClient",
+        "../lib/studioIntegration",
+        "./ProfileWorkspace",
+        "./StudioIntakePanel"
+      ]
+    }
+  ],
+  "routeCssOwnershipRules": [
+    {
+      "cssFile": "styles/settings.css",
+      "allowedImporters": [
+        "apps/desktopapp/src/components/SettingsWindowApp.tsx"
+      ]
+    },
+    {
+      "cssFile": "styles/review-queue.css",
+      "allowedImporters": [
+        "apps/desktopapp/src/components/ReviewWorkspacePage.tsx"
+      ]
+    },
+    {
+      "cssFile": "styles/session-overview.css",
+      "allowedImporters": ["apps/desktopapp/src/components/SessionOverview.tsx"]
+    },
+    {
+      "cssFile": "styles/profile-analysis.css",
+      "allowedImporters": [
+        "apps/desktopapp/src/components/ProfileWorkspace.tsx"
+      ]
+    },
+    {
+      "cssFile": "styles/timeline-context.css",
+      "allowedImporters": [
+        "apps/desktopapp/src/components/CandidateTimeline.tsx"
+      ]
+    }
+  ],
+  "assetBudgets": [
+    {
+      "file": "apps/desktopapp/public/vaexcore-pulse-logo.png",
+      "maxKb": 2000
+    },
+    {
+      "file": "apps/webapp/public/vaexcore-pulse-logo.png",
+      "maxKb": 2000
+    },
+    {
+      "file": "apps/mobileapp/assets/vaexcore-pulse-logo.png",
+      "maxKb": 2000
+    },
+    {
+      "file": "apps/mobileapp/assets/app-icon.png",
+      "maxKb": 1050
+    },
+    {
+      "file": "apps/desktopapp/src-tauri/app-icon.png",
+      "maxKb": 1200
+    },
+    {
+      "file": "apps/desktopapp/src-tauri/icons/icon.png",
+      "maxKb": 1200
+    },
+    {
+      "file": "apps/desktopapp/src-tauri/icons/icon.icns",
+      "maxKb": 2600
+    },
+    {
+      "file": "apps/desktopapp/src-tauri/icons/icon.ico",
+      "maxKb": 210
+    }
+  ],
+  "publicContractSnapshots": [
+    {
+      "kind": "sharedTypesExports",
+      "file": "scripts/contracts/shared-types-exports.txt"
+    },
+    {
+      "kind": "tauriCommands",
+      "file": "scripts/contracts/tauri-commands.txt"
+    }
+  ],
+  "enableDesktopImportCycleCheck": true,
   "ignoredSegments": [],
+  "ignoredPathIncludes": ["apps/desktopapp/src-tauri/resources"],
   "allowedGenerated": [
     "src/vite-env.d.ts",
     "src/atlasDesktop.d.ts",
@@ -15,6 +189,5 @@
     "apps/desktopapp/src/vite-env.d.ts",
     "apps/webapp/src/vite-env.d.ts",
     "apps/desktop/src/vite-env.d.ts"
-  ],
-  "ignoredPathIncludes": ["apps/desktopapp/src-tauri/resources"]
+  ]
 }

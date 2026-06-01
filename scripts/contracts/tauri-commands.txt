@@ -1,0 +1,13 @@
+analyzer_health
+append_suite_timeline
+consume_pulse_recording_handoff
+consume_suite_commands
+inspect_media_playback
+launch_vaexcore_suite
+open_media_in_quicktime
+open_settings_window
+prepare_media_preview_clip
+studio_api_discovery
+suite_session
+suite_status
+suite_timeline
