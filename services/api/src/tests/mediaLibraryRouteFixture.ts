@@ -134,7 +134,7 @@ export function createMediaLibraryRouteFixture() {
     note: "Coarse edit decision record.",
     status: "READY",
     statusDetail:
-      "Paired source and edit registered. This is a coarse runtime-based editorial summary only; timeline-level keep/remove alignment is not implemented yet.",
+      "Paired source and edit registered. Pulse is showing runtime-based edit coverage now; confirmed keep ranges are added automatically when alignment jobs find matching audio fingerprints.",
     sourceDurationSeconds: 14400,
     editDurationSeconds: 3420,
     keptDurationSeconds: 3420,

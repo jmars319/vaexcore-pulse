@@ -36,7 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--profile",
         default="generic",
-        help="Profile id placeholder for future weighting selection.",
+        help="Profile id used for review context.",
     )
     parser.add_argument(
         "--title",

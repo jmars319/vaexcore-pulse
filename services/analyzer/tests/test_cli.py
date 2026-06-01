@@ -32,6 +32,11 @@ from vaexcore_pulse_analyzer.pipeline.orchestrator import analyze_media
 from vaexcore_pulse_analyzer.pipeline.indexing import (
     build_decoded_audio_fingerprint_artifact_from_pcm,
 )
+from vaexcore_pulse_analyzer.pipeline.ingest import (
+    INGEST_NOTE_SEEDED_TRANSCRIPT,
+    INGEST_NOTE_TRANSCRIPT_COMPLETED,
+    INGEST_NOTE_TRANSCRIPT_PROVIDER_UNAVAILABLE,
+)
 from vaexcore_pulse_analyzer.service import (
     analyze_request,
     apply_review_update,
@@ -195,6 +200,44 @@ class AnalyzerScaffoldTests(unittest.TestCase):
             store = SessionStore(database_path)
             self.assertEqual(store.count_candidates(session.id), len(session.candidates))
 
+    def test_real_file_request_uses_local_sidecar_transcript_when_present(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            media_path = Path(temp_dir) / "backlog-pass-02.mp4"
+            media_path.write_bytes(b"not-a-real-video-but-a-real-local-path")
+            media_path.with_suffix(".srt").write_text(
+                "\n".join(
+                    [
+                        "1",
+                        "00:00:04,000 --> 00:00:08,000",
+                        "Clutch reset before the final push.",
+                        "",
+                        "2",
+                        "00:00:18,000 --> 00:00:22,000",
+                        "Strong payoff after the setup.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            session = analyze_request(
+                str(media_path),
+                profile_id="generic",
+                session_title="Backlog pass 02",
+                persist=False,
+                database_path=str(Path(temp_dir) / "vaexcore-pulse.sqlite3"),
+            )
+
+            transcript_text = " ".join(chunk.text for chunk in session.transcript)
+            self.assertIn("Clutch reset", transcript_text)
+            self.assertIn("Strong payoff", transcript_text)
+            self.assertIn(INGEST_NOTE_TRANSCRIPT_COMPLETED, session.media_source.ingest_notes)
+            self.assertNotIn(INGEST_NOTE_TRANSCRIPT_PROVIDER_UNAVAILABLE, session.media_source.ingest_notes)
+            self.assertNotIn(INGEST_NOTE_SEEDED_TRANSCRIPT, session.media_source.ingest_notes)
+            self.assertNotIn(
+                "SEEDED_TRANSCRIPT",
+                [flag.value for flag in session.analysis_coverage.flags],
+            )
+
     @unittest.skipUnless(hasattr(os, "mkfifo"), "mkfifo unavailable on this platform")
     def test_real_file_request_rejects_non_regular_media_paths(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -330,7 +373,7 @@ class AnalyzerScaffoldTests(unittest.TestCase):
             self.assertEqual(pairs[0].id, pair.id)
             self.assertEqual(pairs[0].vod_asset_id, vod_asset.id)
             self.assertEqual(pairs[0].edit_asset_id, edit_asset.id)
-            self.assertIn("runtime-based editorial summary", pairs[0].status_detail)
+            self.assertIn("runtime-based edit coverage", pairs[0].status_detail)
             self.assertEqual(len(pairs[0].alignment_segments), 2)
             self.assertEqual(pairs[0].alignment_segments[0].kind.value, "PROVISIONAL_KEEP")
             self.assertEqual(

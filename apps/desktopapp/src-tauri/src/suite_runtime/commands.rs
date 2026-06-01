@@ -350,7 +350,7 @@ fn launch_desktop_app(app_name: &str) -> SuiteLaunchResult {
         SuiteLaunchResult {
             app_name: app_name.to_string(),
             ok: false,
-            detail: "Launch Suite is not implemented on this platform.".to_string(),
+            detail: "Launch Suite is not available on this platform.".to_string(),
         }
     }
 }

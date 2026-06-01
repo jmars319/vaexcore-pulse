@@ -4,6 +4,8 @@ import json
 import re
 import sqlite3
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import asdict, is_dataclass
 from datetime import datetime, timezone
 from enum import Enum
@@ -398,9 +400,22 @@ class SessionStore:
     def __init__(self, database_path: str) -> None:
         self.database_path = Path(database_path)
 
+    @contextmanager
+    def _connection(self) -> Iterator[sqlite3.Connection]:
+        self.database_path.parent.mkdir(parents=True, exist_ok=True)
+        connection = sqlite3.connect(self.database_path)
+        try:
+            yield connection
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
     def initialize(self) -> None:
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.executescript(SCHEMA_SQL)
             self._ensure_column(connection, "project_sessions", "session_json", "TEXT")
             self._ensure_column(connection, "example_clips", "summary_json", "TEXT")
@@ -409,7 +424,7 @@ class SessionStore:
             connection.commit()
 
     def save_session(self, session: ProjectSession) -> None:
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.executescript(SCHEMA_SQL)
             self._seed_system_profiles(connection)
             connection.execute(
@@ -488,7 +503,7 @@ class SessionStore:
             connection.commit()
 
     def save_review_decision(self, decision: ReviewDecision) -> None:
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.executescript(SCHEMA_SQL)
             self._seed_system_profiles(connection)
             connection.execute(
@@ -520,7 +535,7 @@ class SessionStore:
             connection.commit()
 
     def list_profiles(self) -> list[ContentProfile]:
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             self._ensure_column(connection, "example_clips", "summary_json", "TEXT")
@@ -538,7 +553,7 @@ class SessionStore:
             return profiles
 
     def load_profile(self, profile_id: str) -> ContentProfile:
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             self._ensure_column(connection, "example_clips", "summary_json", "TEXT")
@@ -574,7 +589,7 @@ class SessionStore:
         now = datetime.now(timezone.utc).isoformat()
         profile_id = self._generate_profile_id(normalized_name)
 
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             self._ensure_media_library_asset_columns(connection)
@@ -614,7 +629,7 @@ class SessionStore:
         return self._profile_from_row(None, row)
 
     def profile_exists(self, profile_id: str) -> bool:
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.executescript(SCHEMA_SQL)
             self._seed_system_profiles(connection)
             row = connection.execute(
@@ -630,7 +645,7 @@ class SessionStore:
         return "generic"
 
     def list_example_clips(self, profile_id: str) -> list[ExampleClip]:
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             self._ensure_column(connection, "example_clips", "summary_json", "TEXT")
@@ -668,7 +683,7 @@ class SessionStore:
         now = datetime.now(timezone.utc).isoformat()
         example_id = f"example_{uuid.uuid4().hex[:12]}"
 
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             self._ensure_column(connection, "example_clips", "summary_json", "TEXT")
@@ -729,7 +744,7 @@ class SessionStore:
             return self._example_clip_from_row(connection, row)
 
     def list_media_library_assets(self) -> list[MediaLibraryAsset]:
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             self._ensure_column(connection, "example_clips", "summary_json", "TEXT")
@@ -794,7 +809,7 @@ class SessionStore:
         now = datetime.now(timezone.utc).isoformat()
         asset_id = f"asset_{uuid.uuid4().hex[:12]}"
 
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             self._ensure_column(connection, "example_clips", "summary_json", "TEXT")
@@ -885,7 +900,7 @@ class SessionStore:
             raise ValueError("selectedSuggestionIds must be unique")
 
         now = datetime.now(timezone.utc).isoformat()
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             self._ensure_media_library_asset_columns(connection)
@@ -973,7 +988,7 @@ class SessionStore:
             return self._media_library_asset_from_row(connection, row)
 
     def list_media_edit_pairs(self) -> list[MediaEditPair]:
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             self._ensure_media_library_asset_columns(connection)
@@ -1011,7 +1026,7 @@ class SessionStore:
         now = datetime.now(timezone.utc).isoformat()
         pair_id = f"pair_{uuid.uuid4().hex[:12]}"
 
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             self._seed_system_profiles(connection)
@@ -1074,7 +1089,7 @@ class SessionStore:
             return self._media_edit_pair_from_row(connection, row)
 
     def list_media_index_jobs(self) -> list[MediaIndexJob]:
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             self._ensure_media_library_asset_columns(connection)
@@ -1093,7 +1108,7 @@ class SessionStore:
         asset_id: str | None = None,
     ) -> list[MediaIndexArtifact]:
         normalized_asset_id = asset_id.strip() if asset_id else None
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             if normalized_asset_id:
@@ -1122,7 +1137,7 @@ class SessionStore:
         self,
         artifact: MediaIndexArtifact,
     ) -> MediaIndexArtifact:
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             self._load_media_library_asset(connection, artifact.asset_id)
@@ -1177,7 +1192,7 @@ class SessionStore:
         self,
         asset_id: str,
     ) -> MediaIndexArtifact:
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             row = connection.execute(
@@ -1209,7 +1224,7 @@ class SessionStore:
         now = datetime.now(timezone.utc).isoformat()
         job_id = f"index_job_{uuid.uuid4().hex[:12]}"
 
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             self._ensure_media_library_asset_columns(connection)
@@ -1267,7 +1282,7 @@ class SessionStore:
 
     def claim_media_index_job(self, job_id: str) -> MediaIndexJob | None:
         now = datetime.now(timezone.utc).isoformat()
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             row = connection.execute(
@@ -1311,7 +1326,7 @@ class SessionStore:
     ) -> MediaIndexJob:
         now = datetime.now(timezone.utc).isoformat()
         bounded_progress = min(max(progress, 0.0), 0.99)
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             connection.execute(
@@ -1340,7 +1355,7 @@ class SessionStore:
         asset_status_detail: str | None = None,
     ) -> MediaIndexJob:
         now = datetime.now(timezone.utc).isoformat()
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             self._ensure_media_library_asset_columns(connection)
@@ -1387,7 +1402,7 @@ class SessionStore:
 
     def fail_media_index_job(self, job_id: str, error_message: str) -> MediaIndexJob:
         now = datetime.now(timezone.utc).isoformat()
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             job = self._load_media_index_job(connection, job_id)
@@ -1416,7 +1431,7 @@ class SessionStore:
 
     def cancel_media_index_job(self, job_id: str) -> MediaIndexJob:
         now = datetime.now(timezone.utc).isoformat()
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             job = self._load_media_index_job(connection, job_id)
@@ -1446,7 +1461,7 @@ class SessionStore:
             return self._load_media_index_job(connection, job_id)
 
     def media_index_job_is_cancelled(self, job_id: str) -> bool:
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             row = connection.execute(
@@ -1458,7 +1473,7 @@ class SessionStore:
             return row["status"] == MediaIndexJobStatus.CANCELLED.value
 
     def list_media_alignment_jobs(self) -> list[MediaAlignmentJob]:
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             rows = connection.execute(
@@ -1477,7 +1492,7 @@ class SessionStore:
         pair_id: str | None = None,
     ) -> list[MediaAlignmentMatch]:
         normalized_pair_id = pair_id.strip() if pair_id else None
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             if normalized_pair_id:
@@ -1520,7 +1535,7 @@ class SessionStore:
         now = datetime.now(timezone.utc).isoformat()
         job_id = f"align_job_{uuid.uuid4().hex[:12]}"
 
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             if normalized_pair_id:
@@ -1628,7 +1643,7 @@ class SessionStore:
 
     def claim_media_alignment_job(self, job_id: str) -> MediaAlignmentJob | None:
         now = datetime.now(timezone.utc).isoformat()
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             job = self._load_media_alignment_job(connection, job_id)
@@ -1662,7 +1677,7 @@ class SessionStore:
         status_detail: str,
     ) -> MediaAlignmentJob:
         now = datetime.now(timezone.utc).isoformat()
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             connection.execute(
@@ -1687,7 +1702,7 @@ class SessionStore:
         job_id: str,
         matches: list[MediaAlignmentMatch],
     ) -> None:
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             connection.execute(
@@ -1732,7 +1747,7 @@ class SessionStore:
         match_count: int,
     ) -> MediaAlignmentJob:
         now = datetime.now(timezone.utc).isoformat()
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             job = self._load_media_alignment_job(connection, job_id)
@@ -1769,7 +1784,7 @@ class SessionStore:
 
     def fail_media_alignment_job(self, job_id: str, error_message: str) -> MediaAlignmentJob:
         now = datetime.now(timezone.utc).isoformat()
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             job = self._load_media_alignment_job(connection, job_id)
@@ -1796,7 +1811,7 @@ class SessionStore:
 
     def cancel_media_alignment_job(self, job_id: str) -> MediaAlignmentJob:
         now = datetime.now(timezone.utc).isoformat()
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             job = self._load_media_alignment_job(connection, job_id)
@@ -1825,7 +1840,7 @@ class SessionStore:
             return self._load_media_alignment_job(connection, job_id)
 
     def media_alignment_job_is_cancelled(self, job_id: str) -> bool:
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             return (
@@ -1834,7 +1849,7 @@ class SessionStore:
             )
 
     def count_candidates(self, project_session_id: str) -> int:
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.executescript(SCHEMA_SQL)
             result = connection.execute(
                 "SELECT COUNT(*) FROM candidate_windows WHERE project_session_id = ?",
@@ -1843,7 +1858,7 @@ class SessionStore:
         return int(result[0] if result else 0)
 
     def load_session(self, project_session_id: str) -> ProjectSession:
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             self._ensure_column(connection, "project_sessions", "session_json", "TEXT")
@@ -1866,7 +1881,7 @@ class SessionStore:
             return session
 
     def list_session_summaries(self) -> list[dict[str, Any]]:
-        with sqlite3.connect(self.database_path) as connection:
+        with self._connection() as connection:
             connection.row_factory = sqlite3.Row
             connection.executescript(SCHEMA_SQL)
             self._ensure_column(connection, "project_sessions", "session_json", "TEXT")
@@ -2836,8 +2851,8 @@ class SessionStore:
         return {
             "status": MediaEditPairStatus.READY.value,
             "status_detail": (
-                "Paired source and edit registered. This is a coarse runtime-based editorial summary only; "
-                "timeline-level keep/remove alignment is not implemented yet."
+                "Paired source and edit registered. Pulse is showing runtime-based edit coverage now; "
+                "confirmed keep ranges are added automatically when alignment jobs find matching audio fingerprints."
             ),
             "source_duration_seconds": round(source_duration_seconds, 2),
             "edit_duration_seconds": round(edit_duration_seconds, 2),
@@ -2939,8 +2954,7 @@ class SessionStore:
                     estimated_source_seconds=round(kept_duration_seconds, 2),
                     confidence_score=0.15,
                     note=(
-                        "The finished edit is known kept material, but exact source timestamps are unresolved. "
-                        "This segment records the edit runtime as a provisional kept region."
+                        "The finished edit is known kept material. This segment records the edit runtime as a provisional kept region until an alignment job confirms source timestamps."
                     ),
                 )
             ),
@@ -2957,8 +2971,7 @@ class SessionStore:
                     estimated_edit_seconds=0.0,
                     confidence_score=0.15,
                     note=(
-                        "This is the estimated source material not represented by the final edit. "
-                        "It is a pool-level removed estimate, not timestamp-level rejection evidence yet."
+                        "This is the estimated source material not represented by the final edit. It is a pool-level removed estimate that alignment jobs can refine."
                     ),
                 )
             ),

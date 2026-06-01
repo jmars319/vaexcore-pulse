@@ -582,7 +582,7 @@ class Settings:
     suggested_setup_padding_seconds: float = 6.0
     suggested_resolution_padding_seconds: float = 8.0
     experimental_candidate_quota: int = 2
-    transcript_provider: str = "stub-local"
+    transcript_provider: str = "auto-local"
     run_offline_only: bool = True
     use_mock_data: bool = False
 

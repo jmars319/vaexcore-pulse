@@ -9,7 +9,7 @@ from ..contracts import (
     Settings,
     TranscriptChunk,
 )
-from .ingest import INGEST_NOTE_METADATA_FALLBACK
+from .ingest import INGEST_NOTE_METADATA_FALLBACK, INGEST_NOTE_SEEDED_TRANSCRIPT
 
 THIN_TRANSCRIPT_DENSITY = 1.0
 PARTIAL_TRANSCRIPT_DENSITY = 2.0
@@ -30,7 +30,10 @@ def build_analysis_coverage(
     if INGEST_NOTE_METADATA_FALLBACK in media_source.ingest_notes:
         flags.append(AnalysisCoverageFlag.METADATA_FALLBACK_USED)
 
-    if settings.transcript_provider == "stub-local":
+    if (
+        settings.transcript_provider == "stub-local"
+        or INGEST_NOTE_SEEDED_TRANSCRIPT in media_source.ingest_notes
+    ):
         flags.append(AnalysisCoverageFlag.SEEDED_TRANSCRIPT)
 
     if len(transcript) == 0 or transcript_density < THIN_TRANSCRIPT_DENSITY:
