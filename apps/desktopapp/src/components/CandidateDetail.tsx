@@ -9,18 +9,22 @@ import type {
 } from "@vaexcore/pulse-shared-types";
 import {
   describeCandidatePlainly,
-  describeReasonCodePlainly,
   resolveCandidateProfileMatch,
 } from "@vaexcore/pulse-domain";
 import {
-  ConfidenceBadge,
-  ReviewControls,
-  TranscriptSnippetBlock,
-} from "@vaexcore/pulse-ui";
-import { formatLongTime, percentage } from "../lib/format";
-import { formatReviewTagLabel } from "../lib/reviewTags";
+  CandidateDecisionPanel,
+  CandidateDetailEmptyState,
+  CandidateDetailHeader,
+  CandidateOverviewCards,
+  CandidatePreviewPanel,
+} from "./CandidateDetailSections";
+import {
+  CandidateAdjustmentPanel,
+  CandidateContextDetails,
+  CandidateProfileFitPanel,
+  CandidateScoreBreakdown,
+} from "./CandidateDetailInsightSections";
 import { ReviewCompletionPanel } from "./ReviewCompletionPanel";
-import { TranscriptContextPeek } from "./TranscriptContextPeek";
 
 type CandidateDetailProps = {
   candidate: CandidateWindow | null;
@@ -110,19 +114,7 @@ export function CandidateDetail({
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   if (!candidate) {
-    return (
-      <section className="detail-panel glass-panel empty-state">
-        <p className="eyebrow">Selected moment</p>
-        <h2>
-          {candidateCount === 0 ? "No moments found" : "No moment selected"}
-        </h2>
-        <p>
-          {candidateCount === 0
-            ? "No clear moments were found in this session."
-            : "Select a moment to see why it was suggested and where the clip starts and ends."}
-        </p>
-      </section>
-    );
+    return <CandidateDetailEmptyState candidateCount={candidateCount} />;
   }
 
   const activeSegment = decision?.adjustedSegment ?? candidate.suggestedSegment;
@@ -154,271 +146,49 @@ export function CandidateDetail({
 
   return (
     <section className="detail-panel glass-panel">
-      <div className="panel-header">
-        <div>
-          <p className="eyebrow">Selected moment</p>
-          <h2>{decision?.label ?? candidate.editableLabel}</h2>
-          <p className="detail-progress-copy">
-            Moment {candidateIndex + 1} of {candidateCount} • {pendingCount}{" "}
-            undecided
-          </p>
-          {!selectedCandidateVisibleInQueue ? (
-            <p className="detail-mode-copy">
-              This moment is hidden by the current queue filters.
-            </p>
-          ) : null}
-        </div>
-        <div className="detail-header-meta">
-          <span className="decision-pill">
-            {formatDecisionState(decision?.action)}
-          </span>
-          <ConfidenceBadge band={candidate.confidenceBand} />
-        </div>
-      </div>
-
-      {candidate.reviewTags.length > 0 ? (
-        <div className="review-tag-row">
-          {candidate.reviewTags.map((reviewTag) => (
-            <span className="review-tag-pill" key={reviewTag}>
-              {formatReviewTagLabel(reviewTag)}
-            </span>
-          ))}
-        </div>
-      ) : null}
-
-      <div className="detail-grid">
-        <article className="detail-card">
-          <span className="detail-label">Detected moment</span>
-          <strong>
-            {formatLongTime(candidate.candidateWindow.startSeconds)} to{" "}
-            {formatLongTime(candidate.candidateWindow.endSeconds)}
-          </strong>
-          <TranscriptSnippetBlock
-            heading="Transcript snippet"
-            text={candidate.transcriptSnippet}
-          />
-        </article>
-
-        <article className="detail-card">
-          <span className="detail-label">Suggested clip</span>
-          <strong>
-            {formatLongTime(activeSegment.startSeconds)} to{" "}
-            {formatLongTime(activeSegment.endSeconds)}
-          </strong>
-          <p>
-            Lead-in {candidate.suggestedSegment.setupPaddingSeconds}s • Ending{" "}
-            {candidate.suggestedSegment.resolutionPaddingSeconds}s
-          </p>
-        </article>
-
-        <article className="detail-card narrative-card">
-          <span className="detail-label">Why this was suggested</span>
-          <strong>{plainDescription.summary}</strong>
-          <p>
-            {plainDescription.detail ??
-              "Enough signs lined up to make this worth reviewing."}
-          </p>
-          {plainDescription.signalPhrases.length > 0 ? (
-            <div className="analysis-coverage-flag-row">
-              {plainDescription.signalPhrases.map((phrase) => (
-                <span className="analysis-coverage-flag" key={phrase}>
-                  {phrase}
-                </span>
-              ))}
-            </div>
-          ) : null}
-        </article>
-      </div>
-
-      <section className="review-panel preview-launch-panel">
-        <div className="section-title-row">
-          <h3>Watch this moment</h3>
-          <span className="review-status-copy">
-            Open the source video at this exact spot.
-          </span>
-        </div>
-        <div className="action-row">
-          <button
-            className="button-secondary"
-            disabled={!canPreview}
-            onClick={onPreviewSuggestedSegment}
-            type="button"
-          >
-            View suggested clip
-          </button>
-          <button
-            className="button-secondary"
-            disabled={!canPreview}
-            onClick={onPreviewDetectedMoment}
-            type="button"
-          >
-            View detected moment
-          </button>
-        </div>
-      </section>
-
-      <section className="review-panel review-panel-primary">
-        <div className="section-title-row">
-          <h3>Your decision</h3>
-          <span className="review-status-copy">
-            {decision?.action === "ACCEPT"
-              ? "Marked to keep"
-              : decision?.action === "REJECT"
-                ? "Marked to skip"
-                : "Still undecided"}
-          </span>
-        </div>
-
-        <ReviewControls
-          blockLabel="Quick decision"
-          disabled={isSavingReview}
-          labelDraft={labelDraft}
-          onAccept={onAccept}
-          onLabelChange={onLabelChange}
-          onReject={onReject}
-          onRelabel={onSaveLabel}
-          onRetime={onExpandSetup}
-          showLabelEditor={false}
-          showTimingAction={false}
-        />
-
-        <div className="action-row">
-          <button
-            className="button-secondary"
-            disabled={visibleCandidateCount === 0}
-            onClick={onSelectPreviousVisible}
-            type="button"
-          >
-            Previous moment
-          </button>
-          <button
-            className="button-secondary"
-            disabled={isSavingReview || pendingCount === 0}
-            onClick={onSelectNextPending}
-            type="button"
-          >
-            Next undecided
-          </button>
-          <button
-            className="button-secondary"
-            disabled={visibleCandidateCount === 0}
-            onClick={onSelectNextVisible}
-            type="button"
-          >
-            Next moment
-          </button>
-        </div>
-
-        {isSavingReview ? (
-          <p className="review-status">Saving your decision...</p>
-        ) : null}
-        {reviewError ? <p className="review-error">{reviewError}</p> : null}
-      </section>
-
-      <details className="utility-block internal-details">
-        <summary className="internal-details-summary">
-          <span>Context and reference details</span>
-          <span className="queue-count">Optional</span>
-        </summary>
-
-        <article className="detail-card review-context-card">
-          <span className="detail-label">Reference context</span>
-          <strong>{profile.name}</strong>
-          <p>{profileMatch.note}</p>
-          <p>
-            Profile fit {formatProfileMatchStatus(profileMatch.status)} •{" "}
-            {profileMatchingSummary.usableLocalExampleCount} saved example
-            {profileMatchingSummary.usableLocalExampleCount === 1
-              ? ""
-              : "s"}{" "}
-            ready • {profileMatchingSummary.referenceOnlyExampleCount} link-only
-            example
-            {profileMatchingSummary.referenceOnlyExampleCount === 1 ? "" : "s"}
-          </p>
-          {profileMatch.similarityScore !== undefined ? (
-            <p>
-              Similarity {percentage(profileMatch.similarityScore)} • compared
-              with {profileMatch.comparedExampleCount} example
-              {profileMatch.comparedExampleCount === 1 ? "" : "s"}
-            </p>
-          ) : null}
-        </article>
-
-        <TranscriptContextPeek candidate={candidate} transcript={transcript} />
-      </details>
-
-      <details className="breakdown-panel internal-details">
-        <summary className="internal-details-summary">
-          <span>More suggestion detail</span>
-          <span className="score-pill">
-            {percentage(candidate.scoreEstimate)}
-          </span>
-        </summary>
-
-        <div className="analysis-coverage-flag-row">
-          {candidate.reasonCodes.map((reasonCode) => (
-            <span className="analysis-coverage-flag" key={reasonCode}>
-              {describeReasonCodePlainly(reasonCode)}
-            </span>
-          ))}
-        </div>
-
-        <div className="breakdown-list">
-          {candidate.scoreBreakdown.map((item) => (
-            <article
-              className="breakdown-item"
-              key={`${candidate.id}-${item.reasonCode}`}
-            >
-              <div className="breakdown-copy">
-                <strong>{item.label}</strong>
-                <span>{describeReasonCodePlainly(item.reasonCode)}</span>
-              </div>
-              <div className="breakdown-meter">
-                <div
-                  className={
-                    item.direction === "NEGATIVE"
-                      ? "breakdown-fill negative"
-                      : "breakdown-fill"
-                  }
-                  style={{
-                    width: `${Math.min(Math.abs(item.contribution) * 100, 100)}%`,
-                  }}
-                />
-              </div>
-            </article>
-          ))}
-        </div>
-      </details>
-
-      {profileMatch.supportingFactors.length > 0 ||
-      profileMatch.limitingFactors.length > 0 ? (
-        <section className="breakdown-panel">
-          <div className="section-title-row">
-            <h3>Why this fits the current profile</h3>
-            <span className="eyebrow">
-              {profileMatch.method === "LOCAL_FILE_HEURISTIC"
-                ? "Local reference match"
-                : "Match unavailable"}
-            </span>
-          </div>
-
-          {profileMatch.supportingFactors.length > 0 ? (
-            <div className="plain-list">
-              {profileMatch.supportingFactors.map((factor) => (
-                <p key={factor}>{factor}</p>
-              ))}
-            </div>
-          ) : null}
-
-          {profileMatch.limitingFactors.length > 0 ? (
-            <div className="plain-list">
-              {profileMatch.limitingFactors.map((factor) => (
-                <p key={factor}>{factor}</p>
-              ))}
-            </div>
-          ) : null}
-        </section>
-      ) : null}
+      <CandidateDetailHeader
+        candidate={candidate}
+        candidateCount={candidateCount}
+        candidateIndex={candidateIndex}
+        decision={decision}
+        pendingCount={pendingCount}
+        selectedCandidateVisibleInQueue={selectedCandidateVisibleInQueue}
+      />
+      <CandidateOverviewCards
+        activeSegment={activeSegment}
+        candidate={candidate}
+        plainDescription={plainDescription}
+      />
+      <CandidatePreviewPanel
+        canPreview={canPreview}
+        onPreviewDetectedMoment={onPreviewDetectedMoment}
+        onPreviewSuggestedSegment={onPreviewSuggestedSegment}
+      />
+      <CandidateDecisionPanel
+        decision={decision}
+        isSavingReview={isSavingReview}
+        labelDraft={labelDraft}
+        onAccept={onAccept}
+        onExpandSetup={onExpandSetup}
+        onLabelChange={onLabelChange}
+        onReject={onReject}
+        onSaveLabel={onSaveLabel}
+        onSelectNextPending={onSelectNextPending}
+        onSelectNextVisible={onSelectNextVisible}
+        onSelectPreviousVisible={onSelectPreviousVisible}
+        pendingCount={pendingCount}
+        reviewError={reviewError}
+        visibleCandidateCount={visibleCandidateCount}
+      />
+      <CandidateContextDetails
+        candidate={candidate}
+        profile={profile}
+        profileMatch={profileMatch}
+        profileMatchingSummary={profileMatchingSummary}
+        transcript={transcript}
+      />
+      <CandidateScoreBreakdown candidate={candidate} />
+      <CandidateProfileFitPanel profileMatch={profileMatch} />
 
       <ReviewCompletionPanel
         canExportAcceptedToStudio={canExportAcceptedToStudio}
@@ -438,84 +208,16 @@ export function CandidateDetail({
         studioRecordingExportHistory={studioRecordingExportHistory}
       />
 
-      <details className="utility-block internal-details">
-        <summary className="internal-details-summary">
-          <span>Adjust clip or rename</span>
-          <span className="queue-count">Optional</span>
-        </summary>
-
-        <div className="action-row">
-          <button
-            className="button-secondary"
-            disabled={isSavingReview}
-            onClick={onExpandSetup}
-            type="button"
-          >
-            Lengthen opening by 2s
-          </button>
-          <button
-            className="button-secondary"
-            disabled={isSavingReview}
-            onClick={onExpandResolution}
-            type="button"
-          >
-            Lengthen ending by 2s
-          </button>
-          {pendingCount > 0 ? (
-            <button
-              className="button-secondary"
-              onClick={onReturnToProjects}
-              type="button"
-            >
-              Return to backlog
-            </button>
-          ) : null}
-        </div>
-
-        <div className="vcp-controls-row vcp-controls-row-label review-label-editor">
-          <input
-            disabled={isSavingReview}
-            onChange={(event) => onLabelChange(event.target.value)}
-            type="text"
-            value={labelDraft}
-          />
-          <button disabled={isSavingReview} onClick={onSaveLabel} type="button">
-            Rename moment
-          </button>
-        </div>
-      </details>
+      <CandidateAdjustmentPanel
+        isSavingReview={isSavingReview}
+        labelDraft={labelDraft}
+        onExpandResolution={onExpandResolution}
+        onExpandSetup={onExpandSetup}
+        onLabelChange={onLabelChange}
+        onReturnToProjects={onReturnToProjects}
+        onSaveLabel={onSaveLabel}
+        pendingCount={pendingCount}
+      />
     </section>
   );
-}
-
-function formatProfileMatchStatus(
-  status: ReturnType<typeof resolveCandidateProfileMatch>["status"],
-): string {
-  if (status === "EXAMPLE_COMPARISON") {
-    return "Compared with examples";
-  }
-
-  if (status === "HEURISTIC") {
-    return "Checked against examples";
-  }
-
-  if (status === "PLACEHOLDER") {
-    return "Needs examples";
-  }
-
-  return "Not checked";
-}
-
-function formatDecisionState(
-  action: ReviewDecision["action"] | undefined,
-): string {
-  if (action === "ACCEPT") {
-    return "Kept";
-  }
-
-  if (action === "REJECT") {
-    return "Skipped";
-  }
-
-  return "Undecided";
 }

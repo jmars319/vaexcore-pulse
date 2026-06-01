@@ -1,6 +1,6 @@
 {
   "label": "vaexcore-pulse",
-  "maxImplementationFileLines": 535,
+  "maxImplementationFileLines": 525,
   "maxStyleFileLines": 390,
   "maxAppShellLines": 120,
   "maxDesktopMainLines": 450,
@@ -61,12 +61,8 @@
     "apps/desktopapp/src/AppRoot.tsx": 60,
     "apps/desktopapp/src/DesktopApp.tsx": 350,
     "apps/desktopapp/src/components/DesktopWorkspaceFrame.tsx": 325,
-    "apps/desktopapp/src/hooks/useReviewWorkspaceController.ts": 525,
-    "apps/desktopapp/src-tauri/src/suite_runtime/discovery.rs": 535,
     "apps/webapp/src/App.tsx": 535,
-    "apps/mobileapp/src/App.tsx": 535,
-    "scripts/audit-maintainability.mjs": 700,
-    "services/api/src/tests/mediaLibraryRouteFixture.ts": 535
+    "apps/mobileapp/src/App.tsx": 535
   },
   "startupImportRules": [
     {
@@ -135,6 +131,10 @@
     }
   ],
   "assetBudgets": [
+    {
+      "file": "assets/vaexcore-pulse-logo.png",
+      "maxKb": 2000
+    },
     {
       "file": "apps/desktopapp/public/vaexcore-pulse-logo.png",
       "maxKb": 2000

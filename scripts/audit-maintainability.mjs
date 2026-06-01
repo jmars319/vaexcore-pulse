@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import { evaluateDesktopImportCycles } from "./support/audit-desktop-cycles.mjs";
+import { evaluatePublicContractSnapshots } from "./support/audit-public-contracts.mjs";
 
 const root = process.cwd();
 const strict = process.argv.includes("--strict");
@@ -441,187 +443,19 @@ for (const budget of assetBudgets) {
   }
 }
 
-function currentSharedTypeExports() {
-  const entry = path.join(root, "packages/shared-types/src/index.ts");
-  if (!fs.existsSync(entry)) return [];
-  const names = [];
-  const visited = new Set();
-
-  function collect(file) {
-    const resolved = path.resolve(file);
-    if (visited.has(resolved) || !fs.existsSync(resolved)) return;
-    visited.add(resolved);
-    const contents = fs.readFileSync(resolved, "utf8");
-    for (const match of contents.matchAll(
-      /export\s+\*\s+from\s+["']([^"']+)["']/g,
-    )) {
-      const specifier = match[1];
-      if (!specifier.startsWith(".")) continue;
-      collect(path.resolve(path.dirname(resolved), specifier + ".ts"));
-    }
-    for (const match of contents.matchAll(
-      /export\s+(?:type\s+)?\{([^}]+)\}/g,
-    )) {
-      for (const raw of match[1].split(",")) {
-        const parts = raw.trim().split(/\s+as\s+/);
-        const name = (parts[1] || parts[0] || "").trim();
-        if (name) names.push(name);
-      }
-    }
-    for (const match of contents.matchAll(
-      /export\s+(?:declare\s+)?(?:type|interface|const|function|class|enum)\s+([A-Za-z0-9_]+)/g,
-    )) {
-      names.push(match[1]);
-    }
-  }
-
-  collect(entry);
-  return [...new Set(names)].sort();
-}
-
-function collectTypeScriptExports(entry) {
-  const names = [];
-  const visited = new Set();
-
-  function collect(file) {
-    const resolved = path.resolve(file);
-    if (visited.has(resolved) || !fs.existsSync(resolved)) return;
-    visited.add(resolved);
-    const contents = fs.readFileSync(resolved, "utf8");
-    for (const match of contents.matchAll(
-      /export\s+\*\s+from\s+["']([^"']+)["']/g,
-    )) {
-      const specifier = match[1];
-      if (!specifier.startsWith(".")) continue;
-      collect(path.resolve(path.dirname(resolved), specifier + ".ts"));
-    }
-    for (const match of contents.matchAll(
-      /export\s+(?:type\s+)?\{([^}]+)\}/g,
-    )) {
-      for (const raw of match[1].split(",")) {
-        const parts = raw.trim().split(/\s+as\s+/);
-        const name = (parts[1] || parts[0] || "").trim();
-        if (name) names.push(name);
-      }
-    }
-    for (const match of contents.matchAll(
-      /export\s+(?:declare\s+)?(?:type|interface|const|function|class|enum)\s+([A-Za-z0-9_]+)/g,
-    )) {
-      names.push(match[1]);
-    }
-  }
-
-  collect(entry);
-  return [...new Set(names)].sort();
-}
-
-function currentPackageExports(packageName) {
-  const entry = path.join(root, `packages/${packageName}/src/index.ts`);
-  if (!fs.existsSync(entry)) return [];
-  return collectTypeScriptExports(entry);
-}
-
-function currentTauriCommands() {
-  const base = path.join(root, "apps/desktopapp/src-tauri/src");
-  const rustFiles = [];
-  walk(base, rustFiles);
-  const names = [];
-  for (const file of rustFiles.filter((item) => item.endsWith(".rs"))) {
-    const contents = fs.readFileSync(file, "utf8");
-    for (const match of contents.matchAll(
-      /#\[tauri::command\]\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn\s+([a-zA-Z0-9_]+)/g,
-    )) {
-      names.push(match[1]);
-    }
-  }
-  return [...new Set(names)].sort();
-}
-
-for (const snapshot of publicContractSnapshots) {
-  const file = String(snapshot.file ?? "").replaceAll("\\", "/");
-  const absolute = path.join(root, file);
-  if (!file || !fs.existsSync(absolute)) {
-    violations.push("public contract snapshot is missing: " + file);
-    continue;
-  }
-  const expected = fs
-    .readFileSync(absolute, "utf8")
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const current =
-    snapshot.kind === "tauriCommands"
-      ? currentTauriCommands()
-      : snapshot.kind === "domainExports"
-        ? currentPackageExports("domain")
-        : currentSharedTypeExports();
-  const currentSet = new Set(current);
-  const missing = expected.filter((name) => !currentSet.has(name));
-  if (missing.length > 0) {
-    violations.push(
-      (snapshot.kind ?? "contract") +
-        " removed or renamed exports: " +
-        missing.slice(0, 16).join(", ") +
-        (missing.length > 16 ? " and " + (missing.length - 16) + " more" : ""),
-    );
-  }
-}
+violations.push(
+  ...evaluatePublicContractSnapshots(root, publicContractSnapshots),
+);
 
 if (config.enableDesktopImportCycleCheck === true) {
-  const appFiles = implementationRecords
-    .filter((record) =>
-      /^apps\/desktopapp\/src\/.*\.(ts|tsx)$/.test(record.file),
-    )
-    .map((record) => path.join(root, record.file));
-  const fileSet = new Set(appFiles.map((file) => path.resolve(file)));
-  const extensions = [".ts", ".tsx"];
-  function resolveRelativeImport(fromFile, specifier) {
-    if (!specifier.startsWith(".")) return null;
-    const base = path.resolve(path.dirname(fromFile), specifier);
-    for (const extension of extensions) {
-      if (fileSet.has(base + extension)) return base + extension;
-    }
-    for (const extension of extensions) {
-      const indexFile = path.join(base, "index" + extension);
-      if (fileSet.has(indexFile)) return indexFile;
-    }
-    return null;
-  }
-  const graph = new Map();
-  for (const file of appFiles) {
-    const imports = importSpecifiers(fs.readFileSync(file, "utf8"))
-      .map((specifier) => resolveRelativeImport(file, specifier))
-      .filter(Boolean);
-    graph.set(path.resolve(file), imports);
-  }
-  const seen = new Set();
-  const stack = [];
-  const onStack = new Set();
-  const cycles = [];
-  function visit(file) {
-    seen.add(file);
-    onStack.add(file);
-    stack.push(file);
-    for (const dependency of graph.get(file) ?? []) {
-      if (!seen.has(dependency)) visit(dependency);
-      else if (onStack.has(dependency)) {
-        const index = stack.indexOf(dependency);
-        cycles.push(stack.slice(index).concat(dependency));
-      }
-    }
-    stack.pop();
-    onStack.delete(file);
-  }
-  for (const file of graph.keys()) if (!seen.has(file)) visit(file);
-  if (cycles.length > 0) {
-    violations.push(
-      "apps/desktopapp/src import cycles found: " +
-        cycles
-          .slice(0, 3)
-          .map((cycle) => cycle.map((file) => relative(file)).join(" -> "))
-          .join("; "),
-    );
-  }
+  violations.push(
+    ...evaluateDesktopImportCycles({
+      implementationRecords,
+      importSpecifiers,
+      relative,
+      root,
+    }),
+  );
 }
 
 console.log((config.label ?? path.basename(root)) + " maintainability audit");

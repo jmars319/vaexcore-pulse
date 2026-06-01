@@ -25,6 +25,7 @@ const SUITE_COMMAND_STALE_AFTER: Duration = Duration::from_secs(24 * 60 * 60);
 
 include!("suite_runtime/types.rs");
 include!("suite_runtime/commands.rs");
+include!("suite_runtime/discovery_validation.rs");
 include!("suite_runtime/discovery.rs");
 
 #[cfg(test)]
