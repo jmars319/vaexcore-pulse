@@ -326,11 +326,12 @@
     }
 
     fn valid_discovery() -> SuiteDiscoveryDocument {
+        let definition = suite_app_definition_for(PULSE_APP_ID).unwrap();
         SuiteDiscoveryDocument {
             schema_version: SUITE_DISCOVERY_SCHEMA_VERSION,
             app_id: PULSE_APP_ID.to_string(),
-            app_name: APP_NAME.to_string(),
-            bundle_identifier: "com.vaexil.vaexcore.pulse".to_string(),
+            app_name: definition.app_name.to_string(),
+            bundle_identifier: definition.bundle_identifier.to_string(),
             version: env!("CARGO_PKG_VERSION").to_string(),
             pid: 1234,
             started_at: "2026-05-06T12:00:00Z".to_string(),
@@ -339,7 +340,7 @@
             ws_url: None,
             health_url: Some("http://127.0.0.1:4010/health".to_string()),
             capabilities: vec!["pulse.api".to_string()],
-            launch_name: APP_NAME.to_string(),
+            launch_name: definition.launch_name.to_string(),
             suite_session_id: None,
             activity: Some("ready".to_string()),
             activity_detail: None,

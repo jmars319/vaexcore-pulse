@@ -1,6 +1,6 @@
-# vaexcore pulse
+# Vaexcore Pulse by Tenra
 
-vaexcore pulse is a local-first highlight scouting system for long-form stream recordings. It analyzes measurable signals, surfaces likely moments worth reviewing, suggests clip boundaries, and keeps final editorial control with the human creator.
+Vaexcore Pulse by Tenra is a local-first highlight scouting system for long-form stream recordings. It analyzes measurable signals, surfaces likely moments worth reviewing, suggests clip boundaries, and keeps final editorial control with the human creator.
 
 Pulse is not an automatic clip factory. Its job is to reduce review friction while preserving editorial judgment.
 

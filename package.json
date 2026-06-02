@@ -60,5 +60,6 @@
     "@vaexcore/pulse-domain": "workspace:*",
     "@vaexcore/pulse-export": "workspace:*",
     "@vaexcore/pulse-shared-types": "workspace:*"
-  }
+  },
+  "description": "Vaexcore Pulse by Tenra is a local-first highlight scouting system for long-form stream recordings."
 }

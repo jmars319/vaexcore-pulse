@@ -2,13 +2,15 @@ pub(crate) fn start_suite_discovery_heartbeat(app_data_dir: Option<PathBuf>) {
     let started_at = suite_timestamp();
 
     thread::spawn(move || loop {
+        let definition = suite_app_definition_for(PULSE_APP_ID)
+            .expect("vaexcore pulse must be present in suite protocol definitions");
         let api_url = format!("http://127.0.0.1:{API_PORT}");
         let session = read_suite_session_document();
         let document = SuiteDiscoveryDocument {
             schema_version: SUITE_DISCOVERY_SCHEMA_VERSION,
             app_id: PULSE_APP_ID.to_string(),
-            app_name: APP_NAME.to_string(),
-            bundle_identifier: "com.vaexil.vaexcore.pulse".to_string(),
+            app_name: definition.app_name.to_string(),
+            bundle_identifier: definition.bundle_identifier.to_string(),
             version: env!("CARGO_PKG_VERSION").to_string(),
             pid: std::process::id(),
             started_at: started_at.clone(),
@@ -24,7 +26,7 @@ pub(crate) fn start_suite_discovery_heartbeat(app_data_dir: Option<PathBuf>) {
                 "suite.launcher".to_string(),
                 "suite.timeline".to_string(),
             ],
-            launch_name: APP_NAME.to_string(),
+            launch_name: definition.launch_name.to_string(),
             suite_session_id: session.as_ref().map(|session| session.session_id.clone()),
             activity: Some("review-workspace".to_string()),
             activity_detail: session

@@ -24,7 +24,7 @@ pub struct SuiteAppDefinition {
 pub const SUITE_APP_DEFINITIONS: &[SuiteAppDefinition] = &[
     SuiteAppDefinition {
         app_id: "vaexcore-studio",
-        app_name: "vaexcore studio",
+        app_name: "Vaexcore Studio by Tenra",
         launch_name: "vaexcore studio",
         bundle_identifier: "com.vaexcore.studio",
         discovery_file: "vaexcore-studio.json",
@@ -32,7 +32,7 @@ pub const SUITE_APP_DEFINITIONS: &[SuiteAppDefinition] = &[
     },
     SuiteAppDefinition {
         app_id: "vaexcore-pulse",
-        app_name: "vaexcore pulse",
+        app_name: "Vaexcore Pulse by Tenra",
         launch_name: "vaexcore pulse",
         bundle_identifier: "com.vaexil.vaexcore.pulse",
         discovery_file: "vaexcore-pulse.json",
@@ -40,7 +40,7 @@ pub const SUITE_APP_DEFINITIONS: &[SuiteAppDefinition] = &[
     },
     SuiteAppDefinition {
         app_id: "vaexcore-console",
-        app_name: "vaexcore console",
+        app_name: "Vaexcore Console by Tenra",
         launch_name: "vaexcore console",
         bundle_identifier: "com.vaexil.vaexcore.console",
         discovery_file: "vaexcore-console.json",
