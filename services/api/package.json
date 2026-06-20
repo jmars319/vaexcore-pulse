@@ -14,7 +14,7 @@
     "@vaexcore/pulse-domain": "workspace:*",
     "@vaexcore/pulse-profiles": "workspace:*",
     "@vaexcore/pulse-shared-types": "workspace:*",
-    "fastify": "5.8.2"
+    "fastify": "5.8.5"
   },
   "devDependencies": {
     "@types/node": "25.5.0",
