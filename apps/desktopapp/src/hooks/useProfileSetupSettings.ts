@@ -24,6 +24,7 @@ import {
   isLocalServiceUnavailableError,
 } from "../lib/settingsWindowBehavior";
 
+/* Source option boundary */
 export const profileSourceTypeOptions: Array<{
   id: ExampleClipSourceType;
   label: string;
@@ -56,6 +57,7 @@ export const localProfileSourceTypeOptions = profileSourceTypeOptions.filter(
     option.id === "LOCAL_FILE_PATH" || option.id === "LOCAL_FILE_UPLOAD",
 );
 
+/* Profile setup boundary */
 export function useProfileSetupSettings() {
   const apiBaseUrl =
     import.meta.env.VITE_VAEXCORE_PULSE_API_BASE_URL ?? "http://127.0.0.1:4010";
@@ -114,6 +116,7 @@ export function useProfileSetupSettings() {
     editSourceType === "LOCAL_FILE_PATH" || isEditFilePicker;
   const startupCopy = buildPulseStartupCopy(pulseRuntimeStatus);
 
+  /* Profile load boundary */
   useEffect(() => {
     if (!isPulseReady) {
       setIsLoadingProfiles(false);
@@ -165,6 +168,7 @@ export function useProfileSetupSettings() {
     };
   }, [apiBaseUrl, isPulseReady, profileLoadRetryCount]);
 
+  /* Example load boundary */
   useEffect(() => {
     if (!isPulseReady) {
       setIsLoadingProfileExamples(false);
@@ -220,6 +224,7 @@ export function useProfileSetupSettings() {
     };
   }, [apiBaseUrl, isPulseReady, selectedProfileId]);
 
+  /* Local media picker boundary */
   async function handlePickLocalMedia(
     nextSourceType: ExampleClipSourceType,
     onSelect: (selection: string) => void,
@@ -249,6 +254,7 @@ export function useProfileSetupSettings() {
     }
   }
 
+  /* Profile mutation boundary */
   async function handleCreateProfile() {
     const trimmedName = profileName.trim();
     if (!trimmedName) {
@@ -283,6 +289,7 @@ export function useProfileSetupSettings() {
     }
   }
 
+  /* Example mutation boundary */
   async function handleAddExample() {
     if (!selectedProfileId || !sourceValue.trim()) {
       return;

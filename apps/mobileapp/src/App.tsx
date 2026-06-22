@@ -12,9 +12,11 @@ import {
 
 const pulseLogo = require("../assets/vaexcore-pulse-logo.png") as number;
 
+/* Mobile shell boundary */
 export default function App() {
   const [activeTab, setActiveTab] = useState<MobileTab>("dashboard");
 
+  /* Companion tab boundary */
   function renderTabContent() {
     if (activeTab === "projects") {
       return (
@@ -275,6 +277,7 @@ export default function App() {
     );
   }
 
+  /* App layout boundary */
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />
@@ -327,6 +330,7 @@ type MetricCardProps = {
   value: string;
 };
 
+/* Metric card boundary */
 function MetricCard({ label, value }: MetricCardProps) {
   return (
     <View style={styles.metricCard}>
@@ -336,6 +340,7 @@ function MetricCard({ label, value }: MetricCardProps) {
   );
 }
 
+/* Mobile style boundary */
 const styles = StyleSheet.create({
   screen: {
     flex: 1,

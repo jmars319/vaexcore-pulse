@@ -5,6 +5,7 @@ import {
   type ReviewDecision,
 } from "./domain";
 
+/* Primary session fixture */
 export function createMockProjectSession(): ProjectSession {
   return projectSessionSchema.parse({
     id: "session_demo_local",
@@ -333,6 +334,7 @@ export function createMockProjectSession(): ProjectSession {
   });
 }
 
+/* Session list fixture */
 export function createMockProjectSessions(): ProjectSession[] {
   const primary = createMockProjectSession();
 
@@ -402,6 +404,7 @@ export function createMockProjectSessions(): ProjectSession[] {
   ];
 }
 
+/* Review history fixture */
 export function createMockReviewHistory(): ReviewDecision[] {
   return [
     {

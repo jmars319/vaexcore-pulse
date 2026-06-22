@@ -28,6 +28,7 @@ from .segmentation import create_micro_windows
 from .speaker_activity import estimate_speech_regions
 from .transcript import generate_transcript
 
+# Matching method contract
 LOCAL_FILE_HEURISTIC_VERSION = "LOCAL_FILE_HEURISTIC_V2"
 TRANSCRIPT_ANCHOR_STOPWORDS = {
     "about",
@@ -82,6 +83,7 @@ class ExampleComparison:
     limiting_factors: list[str]
 
 
+# Example feature boundary
 def build_local_example_feature_summary(
     source_path: str,
     settings: Settings,
@@ -174,6 +176,7 @@ def build_local_example_feature_summary(
     )
 
 
+# Profile match boundary
 def build_profile_match(
     candidate: CandidateWindow,
     feature_windows: list[FeatureWindow],
@@ -262,6 +265,7 @@ def build_profile_match(
     )
 
 
+# Candidate feature boundary
 def build_candidate_feature_summary(
     candidate: CandidateWindow,
     feature_windows: list[FeatureWindow],
@@ -321,6 +325,7 @@ def build_candidate_feature_summary(
     )
 
 
+# Similarity scoring boundary
 def _compare_candidate_to_example(
     candidate_summary: CandidateFeatureSummary,
     example: ExampleClip,
@@ -587,6 +592,7 @@ def _deduplicate_text(values) -> list[str]:
     return deduped
 
 
+# Transcript anchor boundary
 def _extract_transcript_anchors(
     transcript_texts: list[str],
 ) -> tuple[list[str], list[str]]:

@@ -21,6 +21,7 @@ from ..contracts import (
 from ..paths import resolve_thumbnail_output_root
 from .ingest import inspect_media_with_metadata
 
+# Media index contract
 MEDIA_INDEX_VERSION = "MEDIA_INDEX_V1"
 DEFAULT_BUCKET_DURATION_SECONDS = 30.0
 MAX_AUDIO_PROXY_BUCKETS = 720
@@ -41,6 +42,7 @@ FFMPEG_FRAME_TIMEOUT_SECONDS = 30
 THUMBNAIL_OUTPUT_ROOT = resolve_thumbnail_output_root()
 
 
+# Metadata summary boundary
 def build_media_index_summary(source_path: str) -> MediaIndexSummary:
     media_source, metadata = inspect_media_with_metadata(
         source_path,
@@ -75,6 +77,7 @@ def build_media_index_summary(source_path: str) -> MediaIndexSummary:
     )
 
 
+# Artifact assembly boundary
 def build_media_index_artifacts(
     *,
     asset_id: str,
@@ -110,6 +113,7 @@ def build_media_index_artifacts(
     return artifacts
 
 
+# Decoded audio boundary
 def build_decoded_audio_fingerprint_artifact(
     *,
     asset_id: str,
@@ -204,6 +208,7 @@ def build_decoded_audio_fingerprint_artifact_from_pcm(
     )
 
 
+# Byte proxy fallback
 def build_audio_fingerprint_artifact(
     *,
     asset_id: str,
@@ -262,6 +267,7 @@ def build_audio_fingerprint_artifact(
     )
 
 
+# Thumbnail scoring boundary
 def build_thumbnail_suggestion_artifact(
     *,
     asset_id: str,
@@ -412,6 +418,7 @@ def _build_proxy_audio_bucket(
     )
 
 
+# FFMPEG decode boundary
 def _decode_low_rate_pcm(index_summary: MediaIndexSummary) -> bytes | None:
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
@@ -518,6 +525,7 @@ def _build_decoded_audio_bucket(
     )
 
 
+# Thumbnail scoring boundary
 def _score_thumbnail_candidate_frames(
     *,
     ffmpeg: str,
@@ -849,6 +857,7 @@ def _read_bounded_media_sample(
         return b""
 
 
+# Artifact payload boundary
 def _bucket_payload(bucket: MediaIndexAudioBucket) -> dict[str, Any]:
     return {
         "index": bucket.index,

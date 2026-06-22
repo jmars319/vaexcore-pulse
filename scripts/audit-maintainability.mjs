@@ -3,6 +3,7 @@ import path from "node:path";
 import { evaluateDesktopImportCycles } from "./support/audit-desktop-cycles.mjs";
 import { evaluatePublicContractSnapshots } from "./support/audit-public-contracts.mjs";
 
+/* Audit configuration boundary */
 const root = process.cwd();
 const strict = process.argv.includes("--strict");
 const configPath = path.join(root, "scripts", "maintainability.config.json");
@@ -137,6 +138,7 @@ function matchesPattern(file, pattern) {
   return file === pattern || file.includes(pattern);
 }
 
+/* Source inventory boundary */
 const sourceRoots = (
   config.sourceRoots ?? [
     "src",
@@ -185,8 +187,10 @@ const allowedGeneratedImportSpecifiers = new Set(
   ),
 );
 
+/* Line budget boundary */
 const violations = [];
 const warnings = [];
+/* Dependency rule boundary */
 for (const record of implementationRecords) {
   const isAppShell = /(^|\/)App\.(tsx|jsx|ts|js)$/.test(record.file);
   const isDesktopMain =

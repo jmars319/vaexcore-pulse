@@ -75,6 +75,7 @@ from ..pipeline.profile_matching import (
     build_local_example_feature_summary,
 )
 
+# SQLite schema contract
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS project_sessions (
   id TEXT PRIMARY KEY,
@@ -306,6 +307,7 @@ ON media_edit_pairs(profile_id, updated_at DESC);
 
 SYSTEM_PROFILE_TIMESTAMP = "2026-04-11T00:00:00.000Z"
 
+# System profile contract
 SYSTEM_PROFILES = [
     ContentProfile(
         id="generic",
@@ -396,6 +398,7 @@ SYSTEM_PROFILES = [
 ]
 
 
+# Analyzer persistence boundary
 class SessionStore:
     def __init__(self, database_path: str) -> None:
         self.database_path = Path(database_path)
@@ -423,6 +426,7 @@ class SessionStore:
             self._seed_system_profiles(connection)
             connection.commit()
 
+    # Session write path
     def save_session(self, session: ProjectSession) -> None:
         with self._connection() as connection:
             connection.executescript(SCHEMA_SQL)
@@ -534,6 +538,7 @@ class SessionStore:
             self._refresh_session_summary(connection, decision.project_session_id, decision.created_at)
             connection.commit()
 
+    # Profile catalog boundary
     def list_profiles(self) -> list[ContentProfile]:
         with self._connection() as connection:
             connection.row_factory = sqlite3.Row
@@ -743,6 +748,7 @@ class SessionStore:
 
             return self._example_clip_from_row(connection, row)
 
+    # Media library persistence
     def list_media_library_assets(self) -> list[MediaLibraryAsset]:
         with self._connection() as connection:
             connection.row_factory = sqlite3.Row
@@ -1088,6 +1094,7 @@ class SessionStore:
 
             return self._media_edit_pair_from_row(connection, row)
 
+    # Index job boundary
     def list_media_index_jobs(self) -> list[MediaIndexJob]:
         with self._connection() as connection:
             connection.row_factory = sqlite3.Row
@@ -1472,6 +1479,7 @@ class SessionStore:
                 raise KeyError(f"Media index job not found: {job_id}")
             return row["status"] == MediaIndexJobStatus.CANCELLED.value
 
+    # Alignment job boundary
     def list_media_alignment_jobs(self) -> list[MediaAlignmentJob]:
         with self._connection() as connection:
             connection.row_factory = sqlite3.Row
@@ -1848,6 +1856,7 @@ class SessionStore:
                 == MediaAlignmentJobStatus.CANCELLED
             )
 
+    # Session hydration boundary
     def count_candidates(self, project_session_id: str) -> int:
         with self._connection() as connection:
             connection.executescript(SCHEMA_SQL)
@@ -1955,6 +1964,7 @@ class SessionStore:
 
         return summaries
 
+    # Row hydration boundary
     def _seed_system_profiles(self, connection: sqlite3.Connection) -> None:
         for profile in SYSTEM_PROFILES:
             connection.execute(
@@ -2796,6 +2806,7 @@ class SessionStore:
             note=value["note"],
         )
 
+    # Local media boundary
     def _summarize_local_example(
         self,
         source_value: str,

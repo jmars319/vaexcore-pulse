@@ -24,6 +24,7 @@ from .storage.session_store import SessionStore
 DEFAULT_DATABASE_PATH = resolve_default_database_path()
 
 
+# Analysis request boundary
 def analyze_request(
     source_path: str,
     *,
@@ -134,6 +135,7 @@ def apply_review_update(
     return hydrated_session
 
 
+# Profile request boundary
 def list_profiles_request(
     *,
     database_path: str = DEFAULT_DATABASE_PATH,
@@ -189,6 +191,7 @@ def add_profile_example_request(
     )
 
 
+# Media library boundary
 def list_media_library_assets_request(
     *,
     database_path: str = DEFAULT_DATABASE_PATH,
@@ -265,6 +268,7 @@ def create_media_edit_pair_request(
     )
 
 
+# Index job boundary
 def list_media_index_jobs_request(
     *,
     database_path: str = DEFAULT_DATABASE_PATH,
@@ -395,6 +399,7 @@ def _run_media_index_job(job_id: str, database_path: str):
         return store.fail_media_index_job(job_id, str(error))
 
 
+# Alignment job boundary
 def list_media_alignment_jobs_request(
     *,
     database_path: str = DEFAULT_DATABASE_PATH,
@@ -491,6 +496,7 @@ def _run_media_alignment_job(job_id: str, database_path: str):
         return store.fail_media_alignment_job(job_id, str(error))
 
 
+# Profile matching boundary
 def _apply_profile_matches(
     store: SessionStore,
     session: ProjectSession,

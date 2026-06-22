@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Dict, List, Optional
 
 
+# Review taxonomy contract
 class ConfidenceBand(str, Enum):
     HIGH = "HIGH"
     MEDIUM = "MEDIUM"
@@ -165,6 +166,7 @@ class CandidateProfileMatchStrength(str, Enum):
     WEAK = "WEAK"
 
 
+# Media source contract
 @dataclass
 class TimeRange:
     start_seconds: float
@@ -218,6 +220,7 @@ class FeatureWindow:
     abrupt_silence_after_intensity: float
 
 
+# Candidate review contract
 @dataclass
 class ScoreContribution:
     reason_code: ReasonCode
@@ -293,6 +296,7 @@ class ExampleClipFeatureSummary:
     coverage_flags: List[AnalysisCoverageFlag] = field(default_factory=list)
 
 
+# Index artifact contract
 @dataclass
 class MediaIndexSummary:
     method_version: str
@@ -410,6 +414,7 @@ class MediaIndexArtifact:
     updated_at: str = ""
 
 
+# Library asset contract
 @dataclass
 class ExampleClip:
     id: str
@@ -463,6 +468,7 @@ class MediaIndexJob:
     cancelled_at: Optional[str] = None
 
 
+# Alignment contract
 @dataclass
 class MediaAlignmentBucketMatch:
     query_bucket_index: int
@@ -559,6 +565,7 @@ class CandidateProfileMatch:
     updated_at: Optional[str] = None
 
 
+# Session contract
 @dataclass
 class ContentProfile:
     id: str

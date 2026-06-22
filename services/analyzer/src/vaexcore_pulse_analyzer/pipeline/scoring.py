@@ -18,6 +18,7 @@ from ..contracts import (
     TranscriptChunk,
 )
 
+# Scoring taxonomy contract
 MENU_TERMS = (
     "menu",
     "inventory",
@@ -59,6 +60,7 @@ def _confidence_band(score_estimate: float) -> ConfidenceBand:
     return ConfidenceBand.EXPERIMENTAL
 
 
+# Candidate seed boundary
 def generate_candidate_seeds(
     transcript: list[TranscriptChunk],
     speech_regions: list[SpeechRegion],
@@ -221,6 +223,7 @@ def generate_candidate_seeds(
     return seeds
 
 
+# Candidate shaping boundary
 def shape_candidates(seeds: list[CandidateSeed], settings: Settings) -> list[CandidateWindow]:
     candidates: list[CandidateWindow] = []
 
@@ -261,6 +264,7 @@ def shape_candidates(seeds: list[CandidateSeed], settings: Settings) -> list[Can
     return candidates
 
 
+# Review filter boundary
 def apply_review_post_filter(
     candidates: list[CandidateWindow],
     feature_windows: list[FeatureWindow],
@@ -473,6 +477,7 @@ def _average(values: list[float], *, fallback: float) -> float:
     return sum(values) / len(values)
 
 
+# Candidate label boundary
 def _derive_candidate_label(
     chunk: TranscriptChunk,
     contributions: list[ScoreContribution],

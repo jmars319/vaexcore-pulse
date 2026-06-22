@@ -56,6 +56,7 @@ type MediaComparisonsSectionProps = {
   vodAssetOptions: MediaLibraryAsset[];
 };
 
+/* Comparison section boundary */
 export function MediaComparisonsSection({
   cancellingMediaAlignmentJobIds,
   editAssetOptions,
@@ -97,6 +98,7 @@ export function MediaComparisonsSection({
         </span>
       </summary>
 
+      {/* Pair setup boundary */}
       <article className="utility-block">
         <div className="panel-header">
           <div>
@@ -217,6 +219,7 @@ export function MediaComparisonsSection({
         </div>
       </article>
 
+      {/* Comparison history boundary */}
       <article className="utility-block">
         <div className="panel-header">
           <div>
@@ -277,6 +280,7 @@ type MediaComparisonCardProps = {
   pairMatches: MediaAlignmentMatch[];
 };
 
+/* Comparison card boundary */
 function MediaComparisonCard({
   cancellingMediaAlignmentJobIds,
   isCreatingMediaAlignmentJob,
@@ -315,6 +319,7 @@ function MediaComparisonCard({
       )
     : "Compare edit to full video";
 
+  /* Alignment action boundary */
   return (
     <article className="profile-example-card">
       <div className="profile-example-top">
@@ -354,6 +359,7 @@ function MediaComparisonCard({
           Needs setup • {pairAlignmentBlockedReason}
         </p>
       ) : null}
+      {/* Match summary boundary */}
       {pairMatches.length > 0 ? (
         <div className="profile-example-list">
           {pairMatches.slice(0, 3).map((match) => (

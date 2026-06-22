@@ -44,6 +44,7 @@ pub(crate) fn start_suite_discovery_heartbeat(app_data_dir: Option<PathBuf>) {
     });
 }
 
+// Local runtime boundary
 fn pulse_suite_local_runtime(app_data_dir: Option<&Path>) -> SuiteLocalRuntime {
     let api_ready = port_is_open(API_PORT);
     let analyzer_ready = port_is_open(ANALYZER_PORT);
@@ -122,6 +123,7 @@ fn pulse_suite_local_runtime(app_data_dir: Option<&Path>) -> SuiteLocalRuntime {
     }
 }
 
+// Discovery document boundary
 fn write_suite_discovery_document(document: &SuiteDiscoveryDocument) -> std::io::Result<()> {
     validate_suite_discovery_document(document).map_err(std::io::Error::other)?;
     let directory = suite_discovery_dir();
@@ -144,6 +146,7 @@ fn suite_app_definition_for(app_id: &str) -> Option<&'static SuiteAppDefinition>
         .find(|definition| definition.app_id == app_id)
 }
 
+// App status boundary
 fn suite_app_status(definition: &SuiteAppDefinition) -> SuiteAppStatus {
     let discovery_file = suite_discovery_dir().join(definition.discovery_file);
     let installed = desktop_app_is_installed(definition.launch_name);
@@ -230,6 +233,7 @@ fn suite_status_detail(
     "Ready.".to_string()
 }
 
+// Discovery path boundary
 fn suite_discovery_dir() -> PathBuf {
     vaexcore_shared_data_dir().join("suite")
 }
@@ -336,6 +340,7 @@ fn suite_timeline_file() -> PathBuf {
     suite_discovery_dir().join("timeline.jsonl")
 }
 
+// Timeline event boundary
 fn append_suite_timeline_event(
     kind: &str,
     title: &str,
@@ -420,6 +425,7 @@ fn process_is_running(pid: u32) -> bool {
     }
 }
 
+// Health probe boundary
 fn health_url_is_reachable(url: &str) -> bool {
     let Some(address) = http_url_authority(url) else {
         return false;

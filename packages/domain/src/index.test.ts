@@ -29,6 +29,7 @@ import {
 } from "./index";
 
 describe("domain helpers", () => {
+  // Summary fixture boundary
   it("builds a stable project summary from a session", () => {
     const session = createMockProjectSession();
     session.reviewDecisions = [
@@ -91,6 +92,7 @@ describe("domain helpers", () => {
     assert.equal(deriveSessionReviewState(summary), "REVIEWED");
   });
 
+  // Candidate filter boundary
   it("filters by relabeled text and confidence band", () => {
     const session = createMockProjectSession();
     const relabeledDecision = {
@@ -225,6 +227,7 @@ describe("domain helpers", () => {
     );
   });
 
+  // Review queue boundary
   it("defaults partially reviewed sessions to pending mode and filters accordingly", () => {
     const session = createMockProjectSession();
     session.reviewDecisions = [
@@ -319,6 +322,7 @@ describe("domain helpers", () => {
     );
   });
 
+  // Profile matching boundary
   it("builds honest placeholder profile matching state without hiding candidates", () => {
     const session = createMockProjectSession();
     const profile = {
@@ -371,6 +375,7 @@ describe("domain helpers", () => {
     assert.equal(filtered.length, session.candidates.length);
   });
 
+  // Display wording boundary
   it("formats analysis coverage bands for desktop display", () => {
     assert.equal(formatAnalysisCoverageBand("STRONG"), "Strong");
     assert.equal(formatAnalysisCoverageBand("PARTIAL"), "Partial");

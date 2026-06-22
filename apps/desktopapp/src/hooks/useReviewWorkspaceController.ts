@@ -62,6 +62,7 @@ type UseReviewWorkspaceControllerOptions = {
   setSelectedProfileId: (profileId: string) => void;
 };
 
+/* Review workspace boundary */
 export function useReviewWorkspaceController({
   activePage,
   analysisProfileId,
@@ -196,11 +197,13 @@ export function useReviewWorkspaceController({
     sessionCandidates,
   });
 
+  /* Preview lifecycle boundary */
   useEffect(() => {
     if (activePage === "candidate-review") return;
     setMomentPreviewState(null);
   }, [activePage]);
 
+  /* Resume state boundary */
   useEffect(() => {
     if (!projectSession) return;
     const queueIndex = selectedCandidate
@@ -229,6 +232,7 @@ export function useReviewWorkspaceController({
     selectedCandidateId: selectedCandidate?.id ?? null,
   });
 
+  /* Session application boundary */
   function applyProjectSession(
     nextSession: ProjectSession,
     options: {
@@ -307,6 +311,7 @@ export function useReviewWorkspaceController({
     }
   }
 
+  /* Profile refresh boundary */
   async function handleProfileExamplesChanged(profileId: string) {
     if (projectSession?.profileId !== profileId) return;
     const refreshedSession = await fetchProjectSession(
@@ -345,6 +350,7 @@ export function useReviewWorkspaceController({
     }));
   }
 
+  /* Review action boundary */
   function handleSaveLabel() {
     if (!selectedCandidate) return;
     void upsertDecision(selectedCandidate, "RELABEL", {

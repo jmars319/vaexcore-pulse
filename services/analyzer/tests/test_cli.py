@@ -52,6 +52,7 @@ from vaexcore_pulse_analyzer.service import (
 from vaexcore_pulse_analyzer.storage.session_store import SessionStore
 
 
+# Analyzer fixture boundary
 class AnalyzerScaffoldTests(unittest.TestCase):
     def test_default_database_path_uses_application_support(self) -> None:
         with tempfile.TemporaryDirectory() as temp_home:
@@ -253,6 +254,7 @@ class AnalyzerScaffoldTests(unittest.TestCase):
                     database_path=str(Path(temp_dir) / "vaexcore-pulse.sqlite3"),
                 )
 
+    # Media library fixture
     def test_media_library_assets_and_vod_edit_pair_persist(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             database_path = str(Path(temp_dir) / "vaexcore-pulse.sqlite3")
@@ -433,6 +435,7 @@ class AnalyzerScaffoldTests(unittest.TestCase):
             self.assertEqual(loaded_profile.example_clips[0].id, edit_asset.id)
 
     @unittest.skipUnless(shutil.which("ffmpeg"), "ffmpeg unavailable on this machine")
+    # Indexing artifact fixture
     def test_real_video_index_can_persist_thumbnail_suggestions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             database_path = str(Path(temp_dir) / "vaexcore-pulse.sqlite3")
@@ -609,6 +612,7 @@ class AnalyzerScaffoldTests(unittest.TestCase):
             self.assertEqual(store.count_candidates(session_a.id), len(session_a.candidates))
             self.assertEqual(store.count_candidates(session_b.id), len(session_b.candidates))
 
+    # Review persistence fixture
     def test_review_updates_persist_and_reload_from_sqlite(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             media_path = Path(temp_dir) / "review-pass-01.mp4"

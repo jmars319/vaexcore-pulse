@@ -26,6 +26,7 @@ const navItems: Array<{ id: WebPage; label: string }> = [
   { id: "settings", label: "Settings" },
 ];
 
+/* Web shell boundary */
 export default function App() {
   const [activePage, setActivePage] = useState<WebPage>("dashboard");
   const [sessionSummaries, setSessionSummaries] = useState<
@@ -40,6 +41,7 @@ export default function App() {
   const apiBaseUrl =
     import.meta.env.VITE_VAEXCORE_PULSE_API_BASE_URL ?? "http://127.0.0.1:4010";
 
+  /* API health boundary */
   useEffect(() => {
     const controller = new AbortController();
 
@@ -59,6 +61,7 @@ export default function App() {
     return () => controller.abort();
   }, [apiBaseUrl]);
 
+  /* Profile load boundary */
   useEffect(() => {
     const controller = new AbortController();
 
@@ -114,6 +117,7 @@ export default function App() {
     return () => controller.abort();
   }, [apiBaseUrl]);
 
+  /* Session load boundary */
   useEffect(() => {
     const controller = new AbortController();
 
@@ -169,6 +173,7 @@ export default function App() {
     return () => controller.abort();
   }, [apiBaseUrl]);
 
+  /* Session stats boundary */
   const sessionStats = useMemo(() => {
     const reviewedSessions = sessionSummaries.filter(
       (summary) => deriveSessionReviewState(summary) === "REVIEWED",
@@ -192,6 +197,7 @@ export default function App() {
     };
   }, [sessionSummaries]);
 
+  /* Summary card boundary */
   function renderSummaryCard(summary: ProjectSessionSummary) {
     const sessionReviewState = deriveSessionReviewState(summary);
 

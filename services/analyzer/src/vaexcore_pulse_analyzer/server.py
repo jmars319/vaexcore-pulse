@@ -36,6 +36,7 @@ from .service import (
 )
 
 
+# API payload contract
 def _convert(value: Any) -> Any:
     if isinstance(value, Enum):
         return value.value
@@ -58,12 +59,15 @@ def _camel_case(value: str) -> str:
     return parts[0] + "".join(part.capitalize() for part in parts[1:])
 
 
+# Demo-mode boundary
 def _demo_mode_enabled() -> bool:
     value = os.getenv("VAEXCORE_PULSE_ENABLE_DEMO_MODE", "").strip().lower()
     return value in {"1", "true", "yes", "on"}
 
 
+# Analyzer HTTP boundary
 class AnalyzerRequestHandler(BaseHTTPRequestHandler):
+    # Read route boundary
     def do_GET(self) -> None:  # noqa: N802
         request_path = urlparse(self.path).path
 
@@ -322,6 +326,7 @@ class AnalyzerRequestHandler(BaseHTTPRequestHandler):
 
         self._send_json(404, {"error": "not_found"})
 
+    # Mutation route boundary
     def do_POST(self) -> None:  # noqa: N802
         request_path = urlparse(self.path).path
 
@@ -1010,6 +1015,7 @@ class AnalyzerRequestHandler(BaseHTTPRequestHandler):
         return unquote(job_id).strip()
 
 
+# Local runtime boundary
 def main() -> int:
     host = os.getenv("VAEXCORE_PULSE_ANALYZER_HOST", "127.0.0.1")
     port = int(os.getenv("VAEXCORE_PULSE_ANALYZER_PORT", "9010"))

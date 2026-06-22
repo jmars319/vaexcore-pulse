@@ -10,6 +10,7 @@ import {
   formatStatus,
 } from "../lib/settingsWindowBehavior";
 
+/* Profile setup boundary */
 export function ProfileSetupSettingsSection() {
   const {
     canPickClipFile,
@@ -79,6 +80,7 @@ export function ProfileSetupSettingsSection() {
         <p className="settings-success-note">{profileSetupNotice}</p>
       ) : null}
 
+      {/* Profile selection boundary */}
       <section className="settings-card profile-setup-card">
         <div className="profile-setup-toolbar">
           <div>
@@ -115,6 +117,7 @@ export function ProfileSetupSettingsSection() {
         )}
       </section>
 
+      {/* Profile creation boundary */}
       <section className="settings-card profile-setup-card">
         <span className="detail-label">Create profile</span>
         <div className="settings-compact-grid">
@@ -154,6 +157,7 @@ export function ProfileSetupSettingsSection() {
         </div>
       </section>
 
+      {/* Clip example boundary */}
       <section className="settings-card profile-setup-card">
         <div className="profile-setup-toolbar">
           <div>
@@ -295,6 +299,7 @@ export function ProfileSetupSettingsSection() {
         )}
       </section>
 
+      {/* Edit example boundary */}
       <details className="settings-card profile-setup-card internal-details">
         <summary className="internal-details-summary">
           <span>Finished edit example</span>
@@ -415,6 +420,7 @@ export function ProfileSetupSettingsSection() {
         </div>
       </details>
 
+      {/* Saved example boundary */}
       <section className="settings-card profile-setup-card">
         <div className="profile-setup-toolbar">
           <div>

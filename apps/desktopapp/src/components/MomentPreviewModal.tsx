@@ -27,6 +27,7 @@ type MomentPreviewModalProps = {
   onClose: () => void;
 };
 
+/* Moment preview boundary */
 export function MomentPreviewModal({
   candidate,
   decision,
@@ -54,6 +55,7 @@ export function MomentPreviewModal({
   const pendingSeekSecondsRef = useRef<number | null>(null);
   const shouldAutoplayRef = useRef(false);
 
+  /* Modal lifecycle boundary */
   useEffect(() => {
     if (!isOpen) {
       const video = videoRef.current;
@@ -70,6 +72,7 @@ export function MomentPreviewModal({
     setQuickTimeFeedback(null);
   }, [candidate?.id, initialMode, isOpen]);
 
+  /* Keyboard lifecycle boundary */
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -88,6 +91,7 @@ export function MomentPreviewModal({
     };
   }, [isOpen, onClose]);
 
+  /* Preview range boundary */
   const activeSegment = candidate
     ? (decision?.adjustedSegment ?? candidate.suggestedSegment)
     : null;
@@ -111,6 +115,7 @@ export function MomentPreviewModal({
     ? Math.max(0.2, preparedPreview.durationSeconds - 0.05)
     : previewEndSeconds;
 
+  /* Playback inspection boundary */
   useEffect(() => {
     if (!isOpen || !candidate || !mediaPath) {
       setInspection(null);
@@ -143,6 +148,7 @@ export function MomentPreviewModal({
     };
   }, [candidate?.id, isOpen, mediaPath]);
 
+  /* Preview preparation boundary */
   useEffect(() => {
     if (!isOpen || !candidate || !mediaPath || previewRange === null) {
       setPreparedPreview(null);
@@ -198,6 +204,7 @@ export function MomentPreviewModal({
     ? buildLocalMediaUrl(apiBaseUrl, preparedPreview.previewPath)
     : "";
 
+  /* Playback control boundary */
   function seekAndPlay(playback: boolean) {
     const video = videoRef.current;
     if (
@@ -294,6 +301,7 @@ export function MomentPreviewModal({
     setPreviewMode(nextMode);
   }
 
+  /* External player boundary */
   async function handleOpenInQuickTime() {
     setQuickTimeFeedback(null);
     const startSeconds = previewRange?.startSeconds;
