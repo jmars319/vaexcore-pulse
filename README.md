@@ -94,5 +94,6 @@ Use `pnpm run doctor` only with the repo script form where documented; `pnpm doc
 - [Architecture](docs/architecture.md)
 - [Analyzer Pipeline](docs/analyzer-pipeline.md)
 - [API](docs/api.md)
+- [Operator Workflows](docs/OPERATOR_WORKFLOWS.md)
 - [Scoring Model](docs/scoring-model.md)
 - [Suite Protocol](docs/SUITE_PROTOCOL.md)

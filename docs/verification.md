@@ -34,3 +34,9 @@ Verification should be meaningful without pretending the scaffold is feature-com
 - `run doctor`
   - equivalent package-script form if you specifically want the `doctor` script name
   - use `pnpm run doctor`, not `pnpm doctor`
+
+## Operator Validation
+
+Use [Operator Workflows](OPERATOR_WORKFLOWS.md) after automated verification to
+check first-run setup, transcript import, analyzer provenance, keyboard review,
+accepted-only exports, persistence after restart, and local-only diagnostics.
