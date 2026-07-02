@@ -111,7 +111,10 @@ export function useReviewWorkspaceDerivedState({
   const rejectedCount = sessionCandidates.filter(
     (candidate) => decisionsByCandidateId[candidate.id]?.action === "REJECT",
   ).length;
-  const reviewedCount = acceptedCount + rejectedCount;
+  const deferredCount = sessionCandidates.filter(
+    (candidate) => decisionsByCandidateId[candidate.id]?.action === "DEFER",
+  ).length;
+  const reviewedCount = acceptedCount + rejectedCount + deferredCount;
   const pendingReviewCount = Math.max(
     sessionCandidates.length - reviewedCount,
     0,

@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import {
   analyzeProjectRequestSchema,
+  candidateEditRequestSchema,
   reviewUpdateRequestSchema,
 } from "@vaexcore/pulse-shared-types";
 import {
@@ -8,6 +9,7 @@ import {
   requestAnalyzerSession,
   requestSessionSummaries,
   requestStoredSession,
+  submitCandidateEdit,
   submitReviewUpdate,
 } from "../lib/analyzer.js";
 
@@ -132,6 +134,35 @@ export const projectRoutes: FastifyPluginAsync = async (fastify) => {
 
       return reply.code(500).send({
         error: "review_failed",
+        message: "Unexpected analyzer bridge failure",
+      });
+    }
+  });
+
+  fastify.post("/api/projects/candidates/edit", async (request, reply) => {
+    const parsedRequest = candidateEditRequestSchema.safeParse(request.body);
+    if (!parsedRequest.success) {
+      return reply.code(400).send({
+        error: "invalid_request",
+        message:
+          parsedRequest.error.issues[0]?.message ?? "Invalid request body",
+      });
+    }
+
+    try {
+      const session = await submitCandidateEdit(parsedRequest.data);
+      return reply.code(200).send(session);
+    } catch (error) {
+      if (error instanceof AnalyzerBridgeError) {
+        const statusCode = error.statusCode >= 500 ? 502 : error.statusCode;
+        return reply.code(statusCode).send({
+          error: "candidate_edit_failed",
+          message: error.message,
+        });
+      }
+
+      return reply.code(500).send({
+        error: "candidate_edit_failed",
         message: "Unexpected analyzer bridge failure",
       });
     }

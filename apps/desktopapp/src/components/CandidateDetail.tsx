@@ -44,16 +44,22 @@ type CandidateDetailProps = {
   canPreview: boolean;
   canExportAcceptedToStudio: boolean;
   onAccept: () => void;
+  onCorrectTranscriptChunk: (chunkId: string, text: string) => void;
+  onCreateManualCandidate: () => void;
+  onDefer: () => void;
   onReject: () => void;
   onExportAcceptedToStudio: () => void;
   onExpandSetup: () => void;
   onExpandResolution: () => void;
   onPreviewDetectedMoment: () => void;
   onPreviewSuggestedSegment: () => void;
+  onMergeWithNextVisible: () => void;
+  onRankCandidate: (rankDelta: number) => void;
   onOpenNextPendingSession: () => void;
   onSelectPreviousVisible: () => void;
   onSelectNextVisible: () => void;
   onSelectNextPending: () => void;
+  onSplitCandidate: () => void;
   onLabelChange: (value: string) => void;
   labelDraft: string;
   onSaveLabel: () => void;
@@ -90,16 +96,22 @@ export function CandidateDetail({
   canPreview,
   canExportAcceptedToStudio,
   onAccept,
+  onCorrectTranscriptChunk,
+  onCreateManualCandidate,
+  onDefer,
   onReject,
   onExportAcceptedToStudio,
   onExpandSetup,
   onExpandResolution,
   onPreviewDetectedMoment,
   onPreviewSuggestedSegment,
+  onMergeWithNextVisible,
+  onRankCandidate,
   onOpenNextPendingSession,
   onSelectPreviousVisible,
   onSelectNextVisible,
   onSelectNextPending,
+  onSplitCandidate,
   onLabelChange,
   labelDraft,
   onSaveLabel,
@@ -169,6 +181,7 @@ export function CandidateDetail({
         isSavingReview={isSavingReview}
         labelDraft={labelDraft}
         onAccept={onAccept}
+        onDefer={onDefer}
         onExpandSetup={onExpandSetup}
         onLabelChange={onLabelChange}
         onReject={onReject}
@@ -182,6 +195,7 @@ export function CandidateDetail({
       />
       <CandidateContextDetails
         candidate={candidate}
+        onCorrectTranscriptChunk={onCorrectTranscriptChunk}
         profile={profile}
         profileMatch={profileMatch}
         profileMatchingSummary={profileMatchingSummary}
@@ -211,11 +225,15 @@ export function CandidateDetail({
       <CandidateAdjustmentPanel
         isSavingReview={isSavingReview}
         labelDraft={labelDraft}
+        onCreateManualCandidate={onCreateManualCandidate}
         onExpandResolution={onExpandResolution}
         onExpandSetup={onExpandSetup}
         onLabelChange={onLabelChange}
+        onMergeWithNextVisible={onMergeWithNextVisible}
+        onRankCandidate={onRankCandidate}
         onReturnToProjects={onReturnToProjects}
         onSaveLabel={onSaveLabel}
+        onSplitCandidate={onSplitCandidate}
         pendingCount={pendingCount}
       />
     </section>

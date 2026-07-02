@@ -31,6 +31,7 @@ export const reviewActionSchema = z.enum([
   "PENDING",
   "ACCEPT",
   "REJECT",
+  "DEFER",
   "RETIME",
   "RELABEL",
 ]);

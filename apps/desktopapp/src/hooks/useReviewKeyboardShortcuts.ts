@@ -5,6 +5,7 @@ import { isEditableTarget } from "../lib/sessionPresentation";
 type UseReviewKeyboardShortcutsOptions = {
   activePage: DesktopPage;
   onAccept: () => void;
+  onDefer: () => void;
   onExpandResolution: () => void;
   onExpandSetup: () => void;
   onOpenMomentPreview: (candidateId: string | null) => void;
@@ -18,6 +19,7 @@ type UseReviewKeyboardShortcutsOptions = {
 export function useReviewKeyboardShortcuts({
   activePage,
   onAccept,
+  onDefer,
   onExpandResolution,
   onExpandSetup,
   onOpenMomentPreview,
@@ -68,6 +70,12 @@ export function useReviewKeyboardShortcuts({
         return;
       }
 
+      if (normalizedKey === "d") {
+        event.preventDefault();
+        onDefer();
+        return;
+      }
+
       if (normalizedKey === "v") {
         event.preventDefault();
         onOpenMomentPreview(selectedCandidateId);
@@ -111,6 +119,7 @@ export function useReviewKeyboardShortcuts({
   }, [
     activePage,
     onAccept,
+    onDefer,
     onExpandResolution,
     onExpandSetup,
     onOpenMomentPreview,

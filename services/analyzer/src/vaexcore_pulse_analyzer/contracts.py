@@ -37,6 +37,7 @@ class ReviewAction(str, Enum):
     PENDING = "PENDING"
     ACCEPT = "ACCEPT"
     REJECT = "REJECT"
+    DEFER = "DEFER"
     RETIME = "RETIME"
     RELABEL = "RELABEL"
 
@@ -246,6 +247,15 @@ class SuggestedSegment:
 
 
 @dataclass
+class CandidateEditRecord:
+    id: str
+    kind: str
+    note: str
+    source_candidate_ids: List[str] = field(default_factory=list)
+    created_at: str = ""
+
+
+@dataclass
 class CandidateWindow:
     id: str
     candidate_window: TimeRange
@@ -259,6 +269,11 @@ class CandidateWindow:
     editable_label: str
     review_tags: List[ReviewTag] = field(default_factory=list)
     profile_matches: List["CandidateProfileMatch"] = field(default_factory=list)
+    rank_adjustment: float = 0.0
+    quality_signals: Dict[str, float] = field(default_factory=dict)
+    duplicate_of_candidate_id: Optional[str] = None
+    near_duplicate_candidate_ids: List[str] = field(default_factory=list)
+    edit_history: List[CandidateEditRecord] = field(default_factory=list)
 
 
 @dataclass

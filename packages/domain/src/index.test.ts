@@ -57,6 +57,7 @@ describe("domain helpers", () => {
       candidateCount: session.candidates.length,
       acceptedCount: 1,
       rejectedCount: 0,
+      deferredCount: 0,
       pendingCount: session.candidates.length - 1,
     });
   });
@@ -281,6 +282,26 @@ describe("domain helpers", () => {
         defaultReviewQueueMode(session),
       ).map((candidate) => candidate.id),
       session.candidates.map((candidate) => candidate.id),
+    );
+  });
+
+  it("treats deferred candidates as reviewed but not accepted", () => {
+    const session = createMockProjectSession();
+    session.reviewDecisions = [
+      {
+        id: "defer_candidate_001",
+        projectSessionId: session.id,
+        candidateId: session.candidates[0].id,
+        action: "DEFER",
+        createdAt: "2026-03-25T18:20:00.000Z",
+      },
+    ];
+
+    assert.equal(isCandidatePending(session, session.candidates[0].id), false);
+    assert.equal(buildProjectSummary(session).acceptedCount, 0);
+    assert.equal(
+      buildProjectSummary(session).pendingCount,
+      session.candidates.length - 1,
     );
   });
 

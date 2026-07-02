@@ -43,6 +43,8 @@ import {
   lastSessionIdStorageKey,
   useProjectSessionLifecycle,
 } from "./useProjectSessionLifecycle";
+import { useCandidateEditState } from "./useCandidateEditState";
+import { useReviewDecisionActions } from "./useReviewDecisionActions";
 import type { DesktopPage } from "../lib/desktopNavigation";
 import type { MomentPreviewMode } from "../components/MomentPreviewModal";
 
@@ -130,7 +132,9 @@ export function useReviewWorkspaceController({
     projectSession,
     onProjectSessionChange: (nextSession, context) => {
       const shouldAutoAdvance =
-        context.action === "ACCEPT" || context.action === "REJECT";
+        context.action === "ACCEPT" ||
+        context.action === "REJECT" ||
+        context.action === "DEFER";
       const preferredCandidateId = shouldAutoAdvance
         ? (findNextPendingCandidateId(nextSession, context.candidateId) ??
           findFirstPendingCandidateId(nextSession) ??
@@ -146,13 +150,19 @@ export function useReviewWorkspaceController({
       setProjectSummaries((current) =>
         upsertProjectSummary(current, buildProjectSummary(nextSession)),
       );
-      if (context.action === "ACCEPT" || context.action === "REJECT") {
+      if (
+        context.action === "ACCEPT" ||
+        context.action === "REJECT" ||
+        context.action === "DEFER"
+      ) {
         void recordPulseTimelineEvent({
           kind: `pulse.review.${context.action.toLowerCase()}`,
           title:
             context.action === "ACCEPT"
               ? "Pulse moment kept"
-              : "Pulse moment skipped",
+              : context.action === "REJECT"
+                ? "Pulse moment skipped"
+                : "Pulse moment deferred",
           detail: `${nextSession.title} updated from Review.`,
           metadata: {
             pulseSessionId: nextSession.id,
@@ -196,6 +206,42 @@ export function useReviewWorkspaceController({
     selectedCandidateId,
     sessionCandidates,
   });
+  const {
+    candidateEditError,
+    handleCorrectTranscriptChunk,
+    handleCreateManualCandidate,
+    handleMergeWithNextVisible,
+    handleRankCandidate,
+    handleSplitCandidate,
+    isSavingCandidateEdit,
+  } = useCandidateEditState({
+    apiBaseUrl,
+    applyProjectSession,
+    labelDrafts,
+    projectSession,
+    queueCandidates,
+    selectedCandidate,
+    selectedCandidateId,
+    selectedDecision,
+    setProjectSummaries,
+  });
+  const {
+    handleAccept,
+    handleDefer,
+    handleExpandResolution,
+    handleExpandSetup,
+    handleLabelChange,
+    handleReject,
+    handleSaveLabel,
+  } = useReviewDecisionActions({
+    clearError,
+    decisionsByCandidateId,
+    labelDrafts,
+    projectSession,
+    selectedCandidate,
+    setLabelDrafts,
+    upsertDecision,
+  });
 
   /* Preview lifecycle boundary */
   useEffect(() => {
@@ -222,6 +268,7 @@ export function useReviewWorkspaceController({
   useReviewKeyboardShortcuts({
     activePage,
     onAccept: handleAccept,
+    onDefer: handleDefer,
     onExpandResolution: handleExpandResolution,
     onExpandSetup: handleExpandSetup,
     onOpenMomentPreview: handleOpenMomentPreview,
@@ -341,68 +388,6 @@ export function useReviewWorkspaceController({
     startTransition(() => setSelectedCandidateId(candidateId));
   }
 
-  function handleLabelChange(nextValue: string) {
-    if (!selectedCandidate) return;
-    clearError();
-    setLabelDrafts((current) => ({
-      ...current,
-      [selectedCandidate.id]: nextValue,
-    }));
-  }
-
-  /* Review action boundary */
-  function handleSaveLabel() {
-    if (!selectedCandidate) return;
-    void upsertDecision(selectedCandidate, "RELABEL", {
-      label: labelDrafts[selectedCandidate.id],
-    });
-  }
-
-  function handleAccept() {
-    if (!selectedCandidate) return;
-    void upsertDecision(selectedCandidate, "ACCEPT", {
-      label: labelDrafts[selectedCandidate.id],
-    });
-  }
-
-  function handleReject() {
-    if (!selectedCandidate) return;
-    void upsertDecision(selectedCandidate, "REJECT", {
-      label: labelDrafts[selectedCandidate.id],
-    });
-  }
-
-  function handleExpandSetup() {
-    if (!selectedCandidate) return;
-    const currentSegment =
-      decisionsByCandidateId[selectedCandidate.id]?.adjustedSegment ??
-      selectedCandidate.suggestedSegment;
-    void upsertDecision(selectedCandidate, "RETIME", {
-      adjustedSegment: {
-        startSeconds: Math.max(0, currentSegment.startSeconds - 2),
-        endSeconds: currentSegment.endSeconds,
-      },
-      label: labelDrafts[selectedCandidate.id],
-    });
-  }
-
-  function handleExpandResolution() {
-    if (!selectedCandidate || !projectSession) return;
-    const currentSegment =
-      decisionsByCandidateId[selectedCandidate.id]?.adjustedSegment ??
-      selectedCandidate.suggestedSegment;
-    void upsertDecision(selectedCandidate, "RETIME", {
-      adjustedSegment: {
-        startSeconds: currentSegment.startSeconds,
-        endSeconds: Math.min(
-          projectSession.mediaSource.durationSeconds,
-          currentSegment.endSeconds + 2,
-        ),
-      },
-      label: labelDrafts[selectedCandidate.id],
-    });
-  }
-
   function handleOpenMomentPreview(
     candidateId: string | null,
     mode: MomentPreviewMode = "SUGGESTED_SEGMENT",
@@ -448,18 +433,24 @@ export function useReviewWorkspaceController({
     activeSessionReviewStateLabel,
     applyProjectSession,
     bandFilter,
+    candidateEditError,
     decisionsByCandidateId,
     edlPreview,
     handleAccept,
+    handleCorrectTranscriptChunk,
+    handleCreateManualCandidate,
+    handleDefer,
     handleCloseMomentPreview,
     handleExpandResolution,
     handleExpandSetup,
     handleLabelChange,
+    handleMergeWithNextVisible,
     handleOpenNextPendingSession,
     handleOpenMomentPreview,
     handleOpenProject,
     handleProfileExamplesChanged,
     handleReject,
+    handleRankCandidate,
     handleReviewQueueModeChange,
     handleSaveLabel,
     handleSearchChange,
@@ -467,7 +458,9 @@ export function useReviewWorkspaceController({
     handleSelectNextPending,
     handleSelectNextVisible,
     handleSelectPreviousVisible,
+    handleSplitCandidate,
     isSavingReview,
+    isSavingCandidateEdit,
     isLoadingProjects,
     isStrongMatchFallback,
     jsonPreview,

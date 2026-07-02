@@ -8,6 +8,7 @@ vaexcore pulse stores project, candidate, and review data locally.
 
 - shared SQLite schema helpers in `packages/storage`
 - Python SQLite persistence in `services/analyzer` for project sessions, candidate windows, review decisions, transcript imports, analyzer provenance, analysis artifacts, profiles, and media-library records
+- candidate edit history, rank adjustments, quality signals, duplicate metadata, and transcript corrections are stored in the saved analyzer session snapshot
 - desktop browser state only for UI resume helpers such as the last opened session, theme mode, and Studio intake queue presentation state
 - operator-selected transcript imports are stored inside the saved analyzer session and analysis artifact rows, not as browser-local review data
 

@@ -4,6 +4,7 @@ import type {
   ProjectSessionSummary,
   TranscriptChunk,
 } from "@vaexcore/pulse-shared-types";
+import { isCandidatePending } from "./reviewQueue";
 
 export type CandidateTranscriptContext = {
   before: TranscriptChunk[];
@@ -54,6 +55,12 @@ export function buildProjectSummary(
   const rejectedCount = session.reviewDecisions.filter(
     (decision) => decision.action === "REJECT",
   ).length;
+  const deferredCount = session.reviewDecisions.filter(
+    (decision) => decision.action === "DEFER",
+  ).length;
+  const pendingCount = session.candidates.filter((candidate) =>
+    isCandidatePending(session, candidate.id),
+  ).length;
 
   return {
     sessionId: session.id,
@@ -68,15 +75,15 @@ export function buildProjectSummary(
     candidateCount: session.candidates.length,
     acceptedCount,
     rejectedCount,
-    pendingCount: Math.max(
-      session.candidates.length - acceptedCount - rejectedCount,
-      0,
-    ),
+    deferredCount,
+    pendingCount,
   };
 }
 
 export function reviewedCandidateCount(summary: ProjectSessionSummary): number {
-  return summary.acceptedCount + summary.rejectedCount;
+  return (
+    summary.acceptedCount + summary.rejectedCount + (summary.deferredCount ?? 0)
+  );
 }
 
 export function deriveSessionReviewState(

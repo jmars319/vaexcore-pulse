@@ -1,4 +1,5 @@
 import { buildCandidateTranscriptContext } from "@vaexcore/pulse-domain";
+import { useState } from "react";
 import type {
   CandidateWindow,
   TranscriptChunk,
@@ -7,13 +8,17 @@ import { formatLongTime, percentage } from "../lib/format";
 
 type TranscriptContextPeekProps = {
   candidate: CandidateWindow | null;
+  onCorrectTranscriptChunk?: (chunkId: string, text: string) => void;
   transcript: TranscriptChunk[];
 };
 
 export function TranscriptContextPeek({
   candidate,
+  onCorrectTranscriptChunk,
   transcript,
 }: TranscriptContextPeekProps) {
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+
   if (!candidate) {
     return (
       <section className="context-panel utility-block">
@@ -99,6 +104,37 @@ export function TranscriptContextPeek({
                       ) : null}
                     </div>
                     <p>{chunk.text}</p>
+                    {onCorrectTranscriptChunk ? (
+                      <div className="transcript-correction-row">
+                        <textarea
+                          aria-label={`Correct transcript line ${chunk.id}`}
+                          onChange={(event) =>
+                            setDrafts((current) => ({
+                              ...current,
+                              [chunk.id]: event.target.value,
+                            }))
+                          }
+                          value={drafts[chunk.id] ?? chunk.text}
+                        />
+                        <button
+                          className="button-secondary"
+                          disabled={
+                            (drafts[chunk.id] ?? chunk.text).trim() ===
+                              chunk.text.trim() ||
+                            !(drafts[chunk.id] ?? chunk.text).trim()
+                          }
+                          onClick={() =>
+                            onCorrectTranscriptChunk(
+                              chunk.id,
+                              (drafts[chunk.id] ?? chunk.text).trim(),
+                            )
+                          }
+                          type="button"
+                        >
+                          Save line
+                        </button>
+                      </div>
+                    ) : null}
                   </article>
                 ))}
               </div>

@@ -21,7 +21,8 @@ It is the default place for:
 - scan launch control
 - moment review UI
 - moment detail inspection
-- keep / skip / adjust / rename flow
+- keep / skip / defer / adjust / rename flow
+- manual candidate creation, split, merge, rank adjustment, and transcript correction
 - export entrypoint
 
 ## Current Navigation
@@ -38,6 +39,12 @@ analyzer persists imported transcript chunks with the SQLite-backed project
 session, and the session overview labels the imported transcript provenance in
 the ingest notes. Review sessions also show analyzer provenance so operators can
 distinguish mock, partial, and real local signal coverage before exporting.
+
+The Review surface is keyboard-first for the core pass: `k` keeps a moment, `x`
+skips it, `d` defers it, `n` jumps to the next undecided candidate, `j` and `l`
+move across visible candidates, and `[` / `]` expand the clip boundary. Optional
+candidate edit controls are persisted through the analyzer-backed SQLite session
+store rather than browser state.
 
 ## macOS Packaging
 

@@ -14,6 +14,7 @@ from .service import (
     DEFAULT_DATABASE_PATH,
     add_profile_example_request,
     analyze_request,
+    apply_candidate_edit,
     apply_review_update,
     cancel_media_alignment_job_request,
     create_media_edit_pair_request,
@@ -934,6 +935,110 @@ class AnalyzerRequestHandler(BaseHTTPRequestHandler):
                     500,
                     {
                         "error": "review_failed",
+                        "message": str(error),
+                    },
+                )
+                return
+
+            self._send_json(
+                200,
+                {
+                    "status": "updated",
+                    "session": _convert(session),
+                },
+            )
+            return
+
+        if request_path == "/candidates/edit":
+            payload = self._read_json_body()
+            session_id = str(payload.get("sessionId", "")).strip()
+            action = str(payload.get("action", "")).strip()
+            if not session_id or not action:
+                self._send_json(
+                    400,
+                    {
+                        "error": "invalid_request",
+                        "message": "sessionId and action are required",
+                    },
+                )
+                return
+
+            try:
+                session = apply_candidate_edit(
+                    session_id,
+                    action=action,
+                    candidate_id=(
+                        str(payload.get("candidateId", "")).strip()
+                        if payload.get("candidateId") is not None
+                        else None
+                    ),
+                    target_candidate_id=(
+                        str(payload.get("targetCandidateId", "")).strip()
+                        if payload.get("targetCandidateId") is not None
+                        else None
+                    ),
+                    label=(
+                        str(payload.get("label", "")).strip()
+                        if payload.get("label") is not None
+                        else None
+                    ),
+                    transcript_snippet=(
+                        str(payload.get("transcriptSnippet", "")).strip()
+                        if payload.get("transcriptSnippet") is not None
+                        else None
+                    ),
+                    candidate_window=payload.get("candidateWindow"),
+                    suggested_segment=payload.get("suggestedSegment"),
+                    split_seconds=(
+                        float(payload["splitSeconds"])
+                        if payload.get("splitSeconds") is not None
+                        else None
+                    ),
+                    rank_delta=(
+                        int(payload["rankDelta"])
+                        if payload.get("rankDelta") is not None
+                        else None
+                    ),
+                    transcript_chunk_id=(
+                        str(payload.get("transcriptChunkId", "")).strip()
+                        if payload.get("transcriptChunkId") is not None
+                        else None
+                    ),
+                    transcript_text=(
+                        str(payload.get("transcriptText", "")).strip()
+                        if payload.get("transcriptText") is not None
+                        else None
+                    ),
+                    timestamp=(
+                        str(payload.get("timestamp", "")).strip()
+                        if payload.get("timestamp")
+                        else None
+                    ),
+                    database_path=self._database_path_from_payload(payload),
+                )
+            except KeyError as error:
+                self._send_json(
+                    404,
+                    {
+                        "error": "not_found",
+                        "message": str(error),
+                    },
+                )
+                return
+            except (ValueError, TypeError) as error:
+                self._send_json(
+                    400,
+                    {
+                        "error": "candidate_edit_failed",
+                        "message": str(error),
+                    },
+                )
+                return
+            except Exception as error:  # pragma: no cover - defensive server guard
+                self._send_json(
+                    500,
+                    {
+                        "error": "candidate_edit_failed",
                         "message": str(error),
                     },
                 )

@@ -18,6 +18,7 @@ from ..contracts import (
     AnalysisCoverageFlag,
     AnalysisProvenance,
     AnalysisProvenanceState,
+    CandidateEditRecord,
     CandidateProfileMatch,
     CandidateProfileMatchStatus,
     CandidateProfileMatchStrength,
@@ -430,6 +431,15 @@ class SessionStore:
 
     # Session write path
     def save_session(self, session: ProjectSession) -> None:
+        accepted_count = sum(
+            1 for decision in session.review_decisions if decision.action.value == "ACCEPT"
+        )
+        rejected_count = sum(
+            1 for decision in session.review_decisions if decision.action.value == "REJECT"
+        )
+        deferred_count = sum(
+            1 for decision in session.review_decisions if decision.action.value == "DEFER"
+        )
         with self._connection() as connection:
             connection.executescript(SCHEMA_SQL)
             self._seed_system_profiles(connection)
@@ -450,16 +460,14 @@ class SessionStore:
                             "status": session.status,
                             "analysis_coverage": self._convert(session.analysis_coverage),
                             "candidate_count": len(session.candidates),
-                            "accepted_count": sum(
-                                1 for decision in session.review_decisions if decision.action.value == "ACCEPT"
-                            ),
-                            "rejected_count": sum(
-                                1 for decision in session.review_decisions if decision.action.value == "REJECT"
-                            ),
+                            "accepted_count": accepted_count,
+                            "rejected_count": rejected_count,
+                            "deferred_count": deferred_count,
                             "pending_count": max(
                                 len(session.candidates)
-                                - sum(1 for decision in session.review_decisions if decision.action.value == "ACCEPT")
-                                - sum(1 for decision in session.review_decisions if decision.action.value == "REJECT"),
+                                - accepted_count
+                                - rejected_count
+                                - deferred_count,
                                 0,
                             ),
                         }
@@ -490,6 +498,32 @@ class SessionStore:
                         self._to_json(candidate.candidate_window),
                         self._to_json(candidate.suggested_segment),
                         self._to_json(candidate.score_breakdown),
+                    ),
+                )
+
+            connection.execute(
+                "DELETE FROM review_decisions WHERE project_session_id = ?",
+                (session.id,),
+            )
+            for decision in session.review_decisions:
+                connection.execute(
+                    """
+                    INSERT INTO review_decisions (
+                      id, project_session_id, candidate_id, action,
+                      label, adjusted_segment_json, notes, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        decision.id,
+                        decision.project_session_id,
+                        decision.candidate_id,
+                        decision.action.value,
+                        decision.label,
+                        self._to_json(decision.adjusted_segment)
+                        if decision.adjusted_segment
+                        else None,
+                        decision.notes,
+                        decision.created_at,
                     ),
                 )
 
@@ -1911,7 +1945,8 @@ class SessionStore:
                   project_sessions.updated_at AS updated_at,
                   COALESCE(candidate_counts.candidate_count, 0) AS candidate_count,
                   COALESCE(accepted_counts.accepted_count, 0) AS accepted_count,
-                  COALESCE(rejected_counts.rejected_count, 0) AS rejected_count
+                  COALESCE(rejected_counts.rejected_count, 0) AS rejected_count,
+                  COALESCE(deferred_counts.deferred_count, 0) AS deferred_count
                 FROM project_sessions
                 LEFT JOIN (
                   SELECT project_session_id, COUNT(*) AS candidate_count
@@ -1933,6 +1968,13 @@ class SessionStore:
                   GROUP BY project_session_id
                 ) AS rejected_counts
                   ON rejected_counts.project_session_id = project_sessions.id
+                LEFT JOIN (
+                  SELECT project_session_id, COUNT(*) AS deferred_count
+                  FROM review_decisions
+                  WHERE action = 'DEFER'
+                  GROUP BY project_session_id
+                ) AS deferred_counts
+                  ON deferred_counts.project_session_id = project_sessions.id
                 ORDER BY project_sessions.updated_at DESC
                 """
             ).fetchall()
@@ -1942,6 +1984,7 @@ class SessionStore:
             candidate_count = int(row["candidate_count"] or 0)
             accepted_count = int(row["accepted_count"] or 0)
             rejected_count = int(row["rejected_count"] or 0)
+            deferred_count = int(row["deferred_count"] or 0)
             source_path = row["source_path"]
             summaries.append(
                 {
@@ -1960,7 +2003,14 @@ class SessionStore:
                     "candidate_count": candidate_count,
                     "accepted_count": accepted_count,
                     "rejected_count": rejected_count,
-                    "pending_count": max(candidate_count - accepted_count - rejected_count, 0),
+                    "deferred_count": deferred_count,
+                    "pending_count": max(
+                        candidate_count
+                        - accepted_count
+                        - rejected_count
+                        - deferred_count,
+                        0,
+                    ),
                 }
             )
 
@@ -3154,9 +3204,17 @@ class SessionStore:
             """,
             (project_session_id,),
         ).fetchone()
+        deferred_count_row = connection.execute(
+            """
+            SELECT COUNT(*) FROM review_decisions
+            WHERE project_session_id = ? AND action = 'DEFER'
+            """,
+            (project_session_id,),
+        ).fetchone()
         candidate_count = int(candidate_count_row[0] if candidate_count_row else 0)
         accepted_count = int(accepted_count_row[0] if accepted_count_row else 0)
         rejected_count = int(rejected_count_row[0] if rejected_count_row else 0)
+        deferred_count = int(deferred_count_row[0] if deferred_count_row else 0)
         existing_summary_row = connection.execute(
             "SELECT summary_json, session_json FROM project_sessions WHERE id = ?",
             (project_session_id,),
@@ -3180,7 +3238,14 @@ class SessionStore:
                         "candidate_count": candidate_count,
                         "accepted_count": accepted_count,
                         "rejected_count": rejected_count,
-                        "pending_count": max(candidate_count - accepted_count - rejected_count, 0),
+                        "deferred_count": deferred_count,
+                        "pending_count": max(
+                            candidate_count
+                            - accepted_count
+                            - rejected_count
+                            - deferred_count,
+                            0,
+                        ),
                     }
                 ),
                 updated_at,
@@ -3439,6 +3504,50 @@ class SessionStore:
                 self._candidate_profile_match_from_dict(match)
                 for match in value.get("profile_matches", [])
             ],
+            rank_adjustment=float(
+                value.get("rank_adjustment", value.get("rankAdjustment", 0)) or 0
+            ),
+            quality_signals={
+                str(key): float(signal_value)
+                for key, signal_value in value.get(
+                    "quality_signals",
+                    value.get("qualitySignals", {}),
+                ).items()
+                if isinstance(signal_value, (int, float))
+            },
+            duplicate_of_candidate_id=value.get(
+                "duplicate_of_candidate_id",
+                value.get("duplicateOfCandidateId"),
+            ),
+            near_duplicate_candidate_ids=[
+                str(candidate_id)
+                for candidate_id in value.get(
+                    "near_duplicate_candidate_ids",
+                    value.get("nearDuplicateCandidateIds", []),
+                )
+            ],
+            edit_history=[
+                self._candidate_edit_record_from_dict(record)
+                for record in value.get("edit_history", value.get("editHistory", []))
+            ],
+        )
+
+    def _candidate_edit_record_from_dict(
+        self,
+        value: dict[str, Any],
+    ) -> CandidateEditRecord:
+        return CandidateEditRecord(
+            id=str(value["id"]),
+            kind=str(value["kind"]),
+            note=str(value.get("note", "")),
+            source_candidate_ids=[
+                str(candidate_id)
+                for candidate_id in value.get(
+                    "source_candidate_ids",
+                    value.get("sourceCandidateIds", []),
+                )
+            ],
+            created_at=str(value.get("created_at", value.get("createdAt", ""))),
         )
 
     def _score_contribution_from_dict(self, value: dict[str, Any]) -> ScoreContribution:

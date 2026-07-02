@@ -86,6 +86,23 @@ export function CandidateDetailHeader({
           ))}
         </div>
       ) : null}
+
+      {candidate.duplicateOfCandidateId ||
+      candidate.nearDuplicateCandidateIds.length > 0 ? (
+        <div className="review-tag-row">
+          {candidate.duplicateOfCandidateId ? (
+            <span className="review-tag-pill">
+              Duplicate of {candidate.duplicateOfCandidateId}
+            </span>
+          ) : null}
+          {candidate.nearDuplicateCandidateIds.length > 0 ? (
+            <span className="review-tag-pill">
+              {candidate.nearDuplicateCandidateIds.length} nearby duplicate
+              {candidate.nearDuplicateCandidateIds.length === 1 ? "" : "s"}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
     </>
   );
 }
@@ -145,8 +162,32 @@ export function CandidateOverviewCards({
           </div>
         ) : null}
       </article>
+
+      <article className="detail-card">
+        <span className="detail-label">Quality signals</span>
+        <strong>{formatQualitySummary(candidate)}</strong>
+        <p>
+          Rank adjustment {candidate.rankAdjustment > 0 ? "+" : ""}
+          {candidate.rankAdjustment.toFixed(0)}
+        </p>
+      </article>
     </div>
   );
+}
+
+function formatQualitySummary(candidate: CandidateWindow): string {
+  const audioActivity = candidate.qualitySignals.audioActivity;
+  const speechDensity = candidate.qualitySignals.speechDensity;
+  if (audioActivity === undefined && speechDensity === undefined) {
+    return "No quality signals saved";
+  }
+
+  return [
+    audioActivity === undefined ? null : `Audio ${percentage(audioActivity)}`,
+    speechDensity === undefined ? null : `Speech ${percentage(speechDensity)}`,
+  ]
+    .filter(Boolean)
+    .join(" • ");
 }
 
 export function CandidatePreviewPanel({
@@ -193,6 +234,7 @@ export function CandidateDecisionPanel({
   isSavingReview,
   labelDraft,
   onAccept,
+  onDefer,
   onExpandSetup,
   onLabelChange,
   onReject,
@@ -208,6 +250,7 @@ export function CandidateDecisionPanel({
   isSavingReview: boolean;
   labelDraft: string;
   onAccept: () => void;
+  onDefer: () => void;
   onExpandSetup: () => void;
   onLabelChange: (value: string) => void;
   onReject: () => void;
@@ -228,7 +271,9 @@ export function CandidateDecisionPanel({
             ? "Marked to keep"
             : decision?.action === "REJECT"
               ? "Marked to skip"
-              : "Still undecided"}
+              : decision?.action === "DEFER"
+                ? "Deferred for later"
+                : "Still undecided"}
         </span>
       </div>
 
@@ -246,6 +291,14 @@ export function CandidateDecisionPanel({
       />
 
       <div className="action-row">
+        <button
+          className="button-secondary"
+          disabled={isSavingReview}
+          onClick={onDefer}
+          type="button"
+        >
+          Defer
+        </button>
         <button
           className="button-secondary"
           disabled={visibleCandidateCount === 0}
@@ -289,6 +342,10 @@ function formatDecisionState(
 
   if (action === "REJECT") {
     return "Skipped";
+  }
+
+  if (action === "DEFER") {
+    return "Deferred";
   }
 
   return "Undecided";

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import type {
   summarizeReviewQueueState,
   ReviewQueueMode,
@@ -12,11 +13,16 @@ import type {
   ProjectSessionSummary,
   ReviewDecision,
 } from "@vaexcore/pulse-shared-types";
-import { CandidateDetail } from "./CandidateDetail";
 import { CandidateQueue } from "./CandidateQueue";
 import { CandidateTimeline } from "./CandidateTimeline";
 import type { MomentPreviewMode } from "./MomentPreviewModal";
 import { SessionOverview } from "./SessionOverview";
+
+const CandidateDetail = lazy(() =>
+  import("./CandidateDetail").then((module) => ({
+    default: module.CandidateDetail,
+  })),
+);
 
 type SessionReviewState = "PENDING" | "IN_PROGRESS" | "REVIEWED";
 
@@ -30,6 +36,7 @@ type ReviewWorkspacePageProps = {
   edlPreview: string;
   isCurrentCandidateSentToStudio: boolean;
   isExportingToStudio: boolean;
+  isSavingCandidateEdit: boolean;
   isSavingReview: boolean;
   isStrongMatchFallback: boolean;
   jsonPreview: string;
@@ -37,6 +44,9 @@ type ReviewWorkspacePageProps = {
   nextPendingSession: ProjectSessionSummary | null;
   onAccept: () => void;
   onBandFilterChange: (value: ConfidenceBand | "ALL") => void;
+  onCorrectTranscriptChunk: (chunkId: string, text: string) => void;
+  onCreateManualCandidate: () => void;
+  onDefer: () => void;
   onExportAcceptedToStudio: () => void;
   onExpandResolution: () => void;
   onExpandSetup: () => void;
@@ -48,6 +58,8 @@ type ReviewWorkspacePageProps = {
   onOpenNextPendingSession: () => void;
   onPresentationModeChange: (value: ProfilePresentationMode) => void;
   onReject: () => void;
+  onMergeWithNextVisible: () => void;
+  onRankCandidate: (rankDelta: number) => void;
   onReturnToProjects: () => void;
   onReviewQueueModeChange: (value: ReviewQueueMode) => void;
   onSaveLabel: () => void;
@@ -56,12 +68,14 @@ type ReviewWorkspacePageProps = {
   onSelectNextPending: () => void;
   onSelectNextVisible: () => void;
   onSelectPreviousVisible: () => void;
+  onSplitCandidate: () => void;
   pendingReviewCount: number;
   presentationMode: ProfilePresentationMode;
   profileMatchingSummary: ProfileMatchingSummary;
   projectSession: ProjectSession | null;
   queueCandidates: CandidateWindow[];
   rejectedCount: number;
+  candidateEditError: string | null;
   reviewError: string | null;
   reviewQueueMode: ReviewQueueMode;
   reviewQueueState: ReturnType<typeof summarizeReviewQueueState> | null;
@@ -94,6 +108,7 @@ export function ReviewWorkspacePage({
   edlPreview,
   isCurrentCandidateSentToStudio,
   isExportingToStudio,
+  isSavingCandidateEdit,
   isSavingReview,
   isStrongMatchFallback,
   jsonPreview,
@@ -101,6 +116,9 @@ export function ReviewWorkspacePage({
   nextPendingSession,
   onAccept,
   onBandFilterChange,
+  onCorrectTranscriptChunk,
+  onCreateManualCandidate,
+  onDefer,
   onExportAcceptedToStudio,
   onExpandResolution,
   onExpandSetup,
@@ -109,6 +127,8 @@ export function ReviewWorkspacePage({
   onOpenNextPendingSession,
   onPresentationModeChange,
   onReject,
+  onMergeWithNextVisible,
+  onRankCandidate,
   onReturnToProjects,
   onReviewQueueModeChange,
   onSaveLabel,
@@ -117,12 +137,14 @@ export function ReviewWorkspacePage({
   onSelectNextPending,
   onSelectNextVisible,
   onSelectPreviousVisible,
+  onSplitCandidate,
   pendingReviewCount,
   presentationMode,
   profileMatchingSummary,
   projectSession,
   queueCandidates,
   rejectedCount,
+  candidateEditError,
   reviewError,
   reviewQueueMode,
   reviewQueueState,
@@ -206,54 +228,69 @@ export function ReviewWorkspacePage({
           totalCandidateCount={sessionCandidates.length}
         />
 
-        <CandidateDetail
-          candidate={selectedCandidate}
-          candidateCount={sessionCandidates.length}
-          candidateIndex={Math.max(selectedCandidateIndex, 0)}
-          canPreview={Boolean(projectSession?.mediaSource.path)}
-          canExportAcceptedToStudio={Boolean(
-            projectSession && acceptedCount > 0,
-          )}
-          decision={selectedDecision}
-          edlPreview={edlPreview}
-          exportPreview={timestampPreview}
-          isCurrentCandidateSentToStudio={isCurrentCandidateSentToStudio}
-          onPreviewDetectedMoment={() =>
-            onOpenMomentPreview(
-              selectedCandidate?.id ?? null,
-              "DETECTED_MOMENT",
-            )
+        <Suspense
+          fallback={
+            <div className="detail-card">
+              <span className="detail-label">Candidate details</span>
+              <p>Loading candidate controls...</p>
+            </div>
           }
-          onPreviewSuggestedSegment={() =>
-            onOpenMomentPreview(selectedCandidate?.id ?? null)
-          }
-          profileMatchingSummary={profileMatchingSummary}
-          selectedCandidateVisibleInQueue={selectedCandidateVisibleInQueue}
-          transcript={projectSession?.transcript ?? []}
-          pendingCount={pendingReviewCount}
-          nextPendingSession={nextPendingSession}
-          labelDraft={labelDraft}
-          onAccept={onAccept}
-          onExportAcceptedToStudio={onExportAcceptedToStudio}
-          onExpandResolution={onExpandResolution}
-          onExpandSetup={onExpandSetup}
-          isExportingToStudio={isExportingToStudio}
-          isSavingReview={isSavingReview}
-          onLabelChange={onLabelChange}
-          onOpenNextPendingSession={onOpenNextPendingSession}
-          onSelectNextVisible={onSelectNextVisible}
-          onSelectPreviousVisible={onSelectPreviousVisible}
-          onReject={onReject}
-          onSaveLabel={onSaveLabel}
-          onSelectNextPending={onSelectNextPending}
-          onReturnToProjects={onReturnToProjects}
-          profile={currentProfile}
-          jsonPreview={jsonPreview}
-          reviewError={reviewError}
-          studioRecordingExportHistory={studioRecordingExportHistory}
-          studioExportStatus={studioExportStatus}
-          visibleCandidateCount={queueCandidates.length}
-        />
+        >
+          <CandidateDetail
+            candidate={selectedCandidate}
+            candidateCount={sessionCandidates.length}
+            candidateIndex={Math.max(selectedCandidateIndex, 0)}
+            canPreview={Boolean(projectSession?.mediaSource.path)}
+            canExportAcceptedToStudio={Boolean(
+              projectSession && acceptedCount > 0,
+            )}
+            decision={selectedDecision}
+            edlPreview={edlPreview}
+            exportPreview={timestampPreview}
+            isCurrentCandidateSentToStudio={isCurrentCandidateSentToStudio}
+            onPreviewDetectedMoment={() =>
+              onOpenMomentPreview(
+                selectedCandidate?.id ?? null,
+                "DETECTED_MOMENT",
+              )
+            }
+            onPreviewSuggestedSegment={() =>
+              onOpenMomentPreview(selectedCandidate?.id ?? null)
+            }
+            profileMatchingSummary={profileMatchingSummary}
+            selectedCandidateVisibleInQueue={selectedCandidateVisibleInQueue}
+            transcript={projectSession?.transcript ?? []}
+            pendingCount={pendingReviewCount}
+            nextPendingSession={nextPendingSession}
+            labelDraft={labelDraft}
+            onAccept={onAccept}
+            onExportAcceptedToStudio={onExportAcceptedToStudio}
+            onExpandResolution={onExpandResolution}
+            onExpandSetup={onExpandSetup}
+            isExportingToStudio={isExportingToStudio}
+            isSavingReview={isSavingReview || isSavingCandidateEdit}
+            onLabelChange={onLabelChange}
+            onOpenNextPendingSession={onOpenNextPendingSession}
+            onCorrectTranscriptChunk={onCorrectTranscriptChunk}
+            onCreateManualCandidate={onCreateManualCandidate}
+            onDefer={onDefer}
+            onMergeWithNextVisible={onMergeWithNextVisible}
+            onRankCandidate={onRankCandidate}
+            onSelectNextVisible={onSelectNextVisible}
+            onSelectPreviousVisible={onSelectPreviousVisible}
+            onReject={onReject}
+            onSaveLabel={onSaveLabel}
+            onSelectNextPending={onSelectNextPending}
+            onReturnToProjects={onReturnToProjects}
+            profile={currentProfile}
+            jsonPreview={jsonPreview}
+            reviewError={reviewError ?? candidateEditError}
+            studioRecordingExportHistory={studioRecordingExportHistory}
+            studioExportStatus={studioExportStatus}
+            onSplitCandidate={onSplitCandidate}
+            visibleCandidateCount={queueCandidates.length}
+          />
+        </Suspense>
       </div>
     </section>
   );

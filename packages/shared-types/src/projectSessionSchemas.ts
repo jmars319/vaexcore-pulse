@@ -59,6 +59,7 @@ export const projectSessionSummarySchema = z.object({
   candidateCount: z.number().int().nonnegative(),
   acceptedCount: z.number().int().nonnegative(),
   rejectedCount: z.number().int().nonnegative(),
+  deferredCount: z.number().int().nonnegative().default(0),
   pendingCount: z.number().int().nonnegative(),
 });
 

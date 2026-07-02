@@ -229,6 +229,7 @@ function buildTimelineMarkerClassName(
     candidateHasReviewRisk(candidate) ? "demoted" : "",
     decision?.action === "ACCEPT" ? "accepted" : "",
     decision?.action === "REJECT" ? "rejected" : "",
+    decision?.action === "DEFER" ? "rejected" : "",
     isSelected ? "selected" : "",
   ]
     .filter(Boolean)
@@ -252,6 +253,10 @@ function formatDecisionState(
 
   if (action === "REJECT") {
     return "Skipped";
+  }
+
+  if (action === "DEFER") {
+    return "Deferred";
   }
 
   return "Undecided";

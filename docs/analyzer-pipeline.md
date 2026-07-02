@@ -19,6 +19,8 @@
 - real-file scans can use operator-imported SRT, VTT, timestamped text, plain text, JSON transcripts, local sidecar transcripts, or deterministic local anchors when no transcript provider is available
 - real-file scans use bounded local FFmpeg PCM analysis for loudness, onset, zero-crossing, peak, and silence-break signals when FFmpeg can decode the source
 - analyzer provenance is persisted with each session as `MOCK`, `REAL`, `PARTIAL`, or `FAILED`
+- candidate windows now persist lightweight quality signals for audio activity, speech density, transcript anchors, loudness, onset density, and positive reason count
+- post-filtering marks near-duplicate and likely duplicate candidates so review can merge, skip, or compare them deliberately
 - transcript-derived estimates remain the graceful fallback when FFmpeg, metadata, transcript, or source media is unavailable
 
 This is intentional. The scaffold optimizes for believable architecture, not premature feature logic.

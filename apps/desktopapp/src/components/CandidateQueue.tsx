@@ -328,5 +328,9 @@ function formatDecisionState(
     return "Skipped";
   }
 
+  if (action === "DEFER") {
+    return "Deferred";
+  }
+
   return "Undecided";
 }

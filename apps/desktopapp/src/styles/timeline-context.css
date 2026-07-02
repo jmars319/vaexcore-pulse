@@ -200,3 +200,14 @@
   margin: 10px 0 0;
   color: var(--muted);
 }
+
+.transcript-correction-row {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.transcript-correction-row textarea {
+  min-height: 72px;
+  resize: vertical;
+}

@@ -11,6 +11,21 @@ import {
 } from "./coreSchemas";
 import { candidateProfileMatchSchema } from "./profileSchemas";
 
+export const candidateEditRecordSchema = z.object({
+  id: z.string(),
+  kind: z.enum([
+    "MANUAL_CREATE",
+    "SPLIT",
+    "MERGE",
+    "RANK_ADJUST",
+    "TRANSCRIPT_CORRECTION",
+    "DUPLICATE_SCAN",
+  ]),
+  note: z.string(),
+  sourceCandidateIds: z.array(z.string()).default([]),
+  createdAt: z.string(),
+});
+
 export const candidateWindowSchema = z.object({
   id: z.string(),
   candidateWindow: timeRangeSchema,
@@ -26,6 +41,11 @@ export const candidateWindowSchema = z.object({
   profileMatches: z
     .array(z.lazy(() => candidateProfileMatchSchema))
     .default([]),
+  rankAdjustment: z.number().default(0),
+  qualitySignals: z.record(z.string(), z.number()).default({}),
+  duplicateOfCandidateId: z.string().optional(),
+  nearDuplicateCandidateIds: z.array(z.string()).default([]),
+  editHistory: z.array(candidateEditRecordSchema).default([]),
 });
 
 export const reviewDecisionSchema = z.object({
@@ -40,6 +60,7 @@ export const reviewDecisionSchema = z.object({
 });
 
 export type CandidateWindow = z.infer<typeof candidateWindowSchema>;
+export type CandidateEditRecord = z.infer<typeof candidateEditRecordSchema>;
 export type ReviewDecision = z.infer<typeof reviewDecisionSchema>;
 
 export type CandidateDecisionMap = Record<string, ReviewDecision | undefined>;

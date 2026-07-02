@@ -24,7 +24,9 @@ export function isCandidatePending(
     (decision) => decision.candidateId === candidateId,
   );
   return (
-    latestDecision?.action !== "ACCEPT" && latestDecision?.action !== "REJECT"
+    latestDecision?.action !== "ACCEPT" &&
+    latestDecision?.action !== "REJECT" &&
+    latestDecision?.action !== "DEFER"
   );
 }
 

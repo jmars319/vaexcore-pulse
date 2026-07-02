@@ -302,6 +302,11 @@ def apply_review_post_filter(
                 fallback=0.0,
             ),
         )
+        transcript_anchor_score = _transcript_anchor_score(candidate.transcript_snippet)
+        audio_activity_score = min(
+            1.0,
+            average_rms * 0.45 + average_onset * 0.3 + average_speech_density * 0.25,
+        )
         positive_reason_count = sum(
             1
             for contribution in candidate.score_breakdown
@@ -405,6 +410,14 @@ def apply_review_post_filter(
                 )
 
         candidate.review_tags = _deduplicate_review_tags(review_tags)
+        candidate.quality_signals = {
+            "audioActivity": round(audio_activity_score, 3),
+            "averageLoudness": round(average_rms, 3),
+            "averageOnsetDensity": round(average_onset, 3),
+            "speechDensity": round(average_speech_density, 3),
+            "transcriptAnchor": round(transcript_anchor_score, 3),
+            "positiveReasonCount": float(positive_reason_count),
+        }
         if extra_contributions or coverage_score_penalty > 0:
             candidate.score_breakdown = _deduplicate_contributions(
                 candidate.score_breakdown + extra_contributions
@@ -425,14 +438,17 @@ def apply_review_post_filter(
 
         reviewed_candidates.append(candidate)
 
-    return sorted(
+    ranked_candidates = sorted(
         reviewed_candidates,
         key=lambda candidate: (
+            -candidate.rank_adjustment,
             -candidate.score_estimate,
             len(candidate.review_tags),
             candidate.candidate_window.start_seconds,
         ),
     )
+    _annotate_near_duplicates(ranked_candidates)
+    return ranked_candidates
 
 
 def _deduplicate_contributions(
@@ -475,6 +491,85 @@ def _average(values: list[float], *, fallback: float) -> float:
         return fallback
 
     return sum(values) / len(values)
+
+
+def _transcript_anchor_score(transcript_snippet: str) -> float:
+    lowered = transcript_snippet.lower()
+    anchor_terms = (
+        "wait",
+        "no way",
+        "here we go",
+        "push",
+        "finish",
+        "survived",
+        "bad",
+        "clutch",
+        "payoff",
+        "setup",
+    )
+    matches = sum(1 for term in anchor_terms if term in lowered)
+    return min(1.0, matches / 4)
+
+
+def _annotate_near_duplicates(candidates: list[CandidateWindow]) -> None:
+    for candidate in candidates:
+        candidate.near_duplicate_candidate_ids = []
+        candidate.duplicate_of_candidate_id = None
+
+    for index, candidate in enumerate(candidates):
+        for other in candidates[index + 1 :]:
+            overlap = _time_overlap_ratio(candidate.candidate_window, other.candidate_window)
+            transcript_similarity = _transcript_similarity(
+                candidate.transcript_snippet,
+                other.transcript_snippet,
+            )
+            if overlap < 0.42 and transcript_similarity < 0.58:
+                continue
+
+            candidate.near_duplicate_candidate_ids.append(other.id)
+            other.near_duplicate_candidate_ids.append(candidate.id)
+
+            if overlap >= 0.72 or transcript_similarity >= 0.82:
+                lower_scoring = (
+                    other
+                    if candidate.score_estimate >= other.score_estimate
+                    else candidate
+                )
+                higher_scoring = candidate if lower_scoring is other else other
+                if lower_scoring.duplicate_of_candidate_id is None:
+                    lower_scoring.duplicate_of_candidate_id = higher_scoring.id
+
+
+def _time_overlap_ratio(left: TimeRange, right: TimeRange) -> float:
+    overlap = max(
+        0.0,
+        min(left.end_seconds, right.end_seconds)
+        - max(left.start_seconds, right.start_seconds),
+    )
+    shortest_duration = max(
+        0.001,
+        min(
+            left.end_seconds - left.start_seconds,
+            right.end_seconds - right.start_seconds,
+        ),
+    )
+    return overlap / shortest_duration
+
+
+def _transcript_similarity(left: str, right: str) -> float:
+    left_terms = {
+        term.strip(".,!?;:\"'()[]{}").lower()
+        for term in left.split()
+        if len(term.strip(".,!?;:\"'()[]{}")) >= 4
+    }
+    right_terms = {
+        term.strip(".,!?;:\"'()[]{}").lower()
+        for term in right.split()
+        if len(term.strip(".,!?;:\"'()[]{}")) >= 4
+    }
+    if not left_terms or not right_terms:
+        return 0.0
+    return len(left_terms & right_terms) / len(left_terms | right_terms)
 
 
 # Candidate label boundary

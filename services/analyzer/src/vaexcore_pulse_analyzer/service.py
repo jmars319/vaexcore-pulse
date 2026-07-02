@@ -1,14 +1,22 @@
 from __future__ import annotations
 
 import threading
+import uuid
+from dataclasses import replace
 from datetime import datetime, timezone
 
 from .contracts import (
+    CandidateEditRecord,
+    CandidateWindow,
+    ConfidenceBand,
     MediaLibraryAssetType,
     ProjectSession,
+    ReasonCode,
     ReviewAction,
     ReviewDecision,
+    ScoreContribution,
     Settings,
+    SuggestedSegment,
     TimeRange,
 )
 from .pipeline.alignment import build_audio_proxy_alignment_matches
@@ -135,6 +143,406 @@ def apply_review_update(
     if _profile_matches_changed(previous_snapshot, hydrated_session):
         store.save_session(hydrated_session)
     return hydrated_session
+
+
+def apply_candidate_edit(
+    session_id: str,
+    *,
+    action: str,
+    candidate_id: str | None = None,
+    target_candidate_id: str | None = None,
+    label: str | None = None,
+    transcript_snippet: str | None = None,
+    candidate_window: dict[str, float] | None = None,
+    suggested_segment: dict[str, object] | None = None,
+    split_seconds: float | None = None,
+    rank_delta: int | None = None,
+    transcript_chunk_id: str | None = None,
+    transcript_text: str | None = None,
+    timestamp: str | None = None,
+    database_path: str = DEFAULT_DATABASE_PATH,
+) -> ProjectSession:
+    store = SessionStore(database_path)
+    store.initialize()
+    session = store.load_session(session_id)
+    created_at = timestamp or datetime.now(timezone.utc).isoformat()
+
+    if action == "CREATE":
+        session.candidates.append(
+            _build_manual_candidate(
+                session,
+                candidate_window,
+                suggested_segment,
+                label,
+                transcript_snippet,
+                created_at,
+            )
+        )
+    elif action == "SPLIT":
+        _split_candidate(session, candidate_id, split_seconds, created_at)
+    elif action == "MERGE":
+        _merge_candidates(session, candidate_id, target_candidate_id, created_at)
+    elif action == "RANK":
+        _rank_candidate(session, candidate_id, rank_delta, created_at)
+    elif action == "TRANSCRIPT_CORRECTION":
+        _apply_transcript_correction(
+            session,
+            transcript_chunk_id,
+            transcript_text,
+            created_at,
+        )
+    else:
+        raise ValueError(f"Unsupported candidate edit action: {action}")
+
+    session.updated_at = created_at
+    store.save_session(session)
+    return load_session_request(session_id, database_path=database_path)
+
+
+def _build_manual_candidate(
+    session: ProjectSession,
+    candidate_window_payload: dict[str, float] | None,
+    suggested_segment_payload: dict[str, object] | None,
+    label: str | None,
+    transcript_snippet: str | None,
+    created_at: str,
+) -> CandidateWindow:
+    if not candidate_window_payload or not suggested_segment_payload or not label:
+        raise ValueError("candidateWindow, suggestedSegment, and label are required")
+
+    candidate_window = _time_range_from_payload(candidate_window_payload)
+    suggested_segment = _suggested_segment_from_payload(suggested_segment_payload)
+    _validate_time_range(candidate_window, session.media_source.duration_seconds)
+    _validate_time_range(
+        TimeRange(
+            start_seconds=suggested_segment.start_seconds,
+            end_seconds=suggested_segment.end_seconds,
+        ),
+        session.media_source.duration_seconds,
+    )
+    candidate_id = f"{session.id}_manual_{len(session.candidates) + 1:03d}_{uuid.uuid4().hex[:6]}"
+    return CandidateWindow(
+        id=candidate_id,
+        candidate_window=candidate_window,
+        suggested_segment=suggested_segment,
+        confidence_band=ConfidenceBand.LOW,
+        score_estimate=0.45,
+        reason_codes=[ReasonCode.STRUCTURE_SETUP],
+        transcript_snippet=transcript_snippet or "Operator-created candidate.",
+        score_breakdown=[
+            ScoreContribution(
+                reason_code=ReasonCode.STRUCTURE_SETUP,
+                label="Operator-created candidate",
+                contribution=0.45,
+                direction="POSITIVE",
+            )
+        ],
+        context_required=True,
+        editable_label=label,
+        quality_signals={"operatorCreated": 1.0},
+        edit_history=[
+            _candidate_edit_record(
+                "MANUAL_CREATE",
+                "Operator created this candidate manually.",
+                [candidate_id],
+                created_at,
+            )
+        ],
+    )
+
+
+def _split_candidate(
+    session: ProjectSession,
+    candidate_id: str | None,
+    split_seconds: float | None,
+    created_at: str,
+) -> None:
+    candidate, index = _find_candidate(session, candidate_id)
+    start_seconds = candidate.candidate_window.start_seconds
+    end_seconds = candidate.candidate_window.end_seconds
+    split_at = split_seconds or ((start_seconds + end_seconds) / 2)
+    if split_at <= start_seconds + 1 or split_at >= end_seconds - 1:
+        raise ValueError("splitSeconds must fall safely inside the candidate window")
+
+    first = replace(
+        candidate,
+        id=f"{candidate.id}_split_a_{uuid.uuid4().hex[:4]}",
+        candidate_window=TimeRange(start_seconds, split_at),
+        suggested_segment=_clip_suggested_segment(
+            candidate.suggested_segment,
+            start_seconds,
+            split_at,
+        ),
+        editable_label=f"{candidate.editable_label} A",
+        duplicate_of_candidate_id=None,
+        near_duplicate_candidate_ids=[],
+        edit_history=[
+            *candidate.edit_history,
+            _candidate_edit_record(
+                "SPLIT",
+                f"Split from {candidate.id}.",
+                [candidate.id],
+                created_at,
+            ),
+        ],
+    )
+    second = replace(
+        candidate,
+        id=f"{candidate.id}_split_b_{uuid.uuid4().hex[:4]}",
+        candidate_window=TimeRange(split_at, end_seconds),
+        suggested_segment=_clip_suggested_segment(
+            candidate.suggested_segment,
+            split_at,
+            end_seconds,
+        ),
+        editable_label=f"{candidate.editable_label} B",
+        duplicate_of_candidate_id=None,
+        near_duplicate_candidate_ids=[],
+        edit_history=[
+            *candidate.edit_history,
+            _candidate_edit_record(
+                "SPLIT",
+                f"Split from {candidate.id}.",
+                [candidate.id],
+                created_at,
+            ),
+        ],
+    )
+    session.candidates[index : index + 1] = [first, second]
+    session.review_decisions = [
+        decision
+        for decision in session.review_decisions
+        if decision.candidate_id != candidate.id
+    ]
+
+
+def _merge_candidates(
+    session: ProjectSession,
+    candidate_id: str | None,
+    target_candidate_id: str | None,
+    created_at: str,
+) -> None:
+    candidate, index = _find_candidate(session, candidate_id)
+    target, target_index = _find_candidate(session, target_candidate_id)
+    if candidate.id == target.id:
+        raise ValueError("A candidate cannot be merged with itself")
+
+    start_seconds = min(
+        candidate.candidate_window.start_seconds,
+        target.candidate_window.start_seconds,
+    )
+    end_seconds = max(
+        candidate.candidate_window.end_seconds,
+        target.candidate_window.end_seconds,
+    )
+    merged = replace(
+        candidate,
+        candidate_window=TimeRange(start_seconds, end_seconds),
+        suggested_segment=SuggestedSegment(
+            start_seconds=min(
+                candidate.suggested_segment.start_seconds,
+                target.suggested_segment.start_seconds,
+            ),
+            end_seconds=max(
+                candidate.suggested_segment.end_seconds,
+                target.suggested_segment.end_seconds,
+            ),
+            setup_padding_seconds=candidate.suggested_segment.setup_padding_seconds,
+            resolution_padding_seconds=(
+                candidate.suggested_segment.resolution_padding_seconds
+            ),
+            trim_dead_air_applied=(
+                candidate.suggested_segment.trim_dead_air_applied
+                and target.suggested_segment.trim_dead_air_applied
+            ),
+        ),
+        score_estimate=round(
+            max(candidate.score_estimate, target.score_estimate),
+            2,
+        ),
+        transcript_snippet=_join_snippets(
+            candidate.transcript_snippet,
+            target.transcript_snippet,
+        ),
+        editable_label=f"Merged: {candidate.editable_label}",
+        duplicate_of_candidate_id=None,
+        near_duplicate_candidate_ids=[],
+        edit_history=[
+            *candidate.edit_history,
+            *target.edit_history,
+            _candidate_edit_record(
+                "MERGE",
+                f"Merged {candidate.id} with {target.id}.",
+                [candidate.id, target.id],
+                created_at,
+            ),
+        ],
+    )
+    session.candidates[index] = merged
+    del session.candidates[target_index if target_index < index else target_index]
+    session.review_decisions = [
+        decision
+        for decision in session.review_decisions
+        if decision.candidate_id not in {candidate.id, target.id}
+    ]
+
+
+def _rank_candidate(
+    session: ProjectSession,
+    candidate_id: str | None,
+    rank_delta: int | None,
+    created_at: str,
+) -> None:
+    if not rank_delta:
+        raise ValueError("rankDelta is required")
+    candidate, index = _find_candidate(session, candidate_id)
+    next_index = max(0, min(len(session.candidates) - 1, index - rank_delta))
+    candidate.rank_adjustment += float(rank_delta)
+    candidate.edit_history.append(
+        _candidate_edit_record(
+            "RANK_ADJUST",
+            f"Rank adjusted by {rank_delta}.",
+            [candidate.id],
+            created_at,
+        )
+    )
+    if next_index == index:
+        return
+    session.candidates.pop(index)
+    session.candidates.insert(next_index, candidate)
+
+
+def _apply_transcript_correction(
+    session: ProjectSession,
+    transcript_chunk_id: str | None,
+    transcript_text: str | None,
+    created_at: str,
+) -> None:
+    if not transcript_chunk_id or not transcript_text:
+        raise ValueError("transcriptChunkId and transcriptText are required")
+
+    chunk = next(
+        (item for item in session.transcript if item.id == transcript_chunk_id),
+        None,
+    )
+    if chunk is None:
+        raise KeyError(f"Transcript chunk not found: {transcript_chunk_id}")
+
+    previous_text = chunk.text
+    chunk.text = transcript_text
+    for candidate in session.candidates:
+        overlaps_chunk = (
+            candidate.candidate_window.start_seconds < chunk.end_seconds
+            and candidate.candidate_window.end_seconds > chunk.start_seconds
+        )
+        if not overlaps_chunk:
+            continue
+        if candidate.transcript_snippet == previous_text:
+            candidate.transcript_snippet = transcript_text
+        elif previous_text in candidate.transcript_snippet:
+            candidate.transcript_snippet = candidate.transcript_snippet.replace(
+                previous_text,
+                transcript_text,
+            )
+        candidate.edit_history.append(
+            _candidate_edit_record(
+                "TRANSCRIPT_CORRECTION",
+                f"Transcript chunk {transcript_chunk_id} corrected.",
+                [candidate.id],
+                created_at,
+            )
+        )
+
+
+def _find_candidate(
+    session: ProjectSession,
+    candidate_id: str | None,
+) -> tuple[CandidateWindow, int]:
+    if not candidate_id:
+        raise ValueError("candidateId is required")
+    for index, candidate in enumerate(session.candidates):
+        if candidate.id == candidate_id:
+            return candidate, index
+    raise KeyError(f"Candidate not found in session {session.id}: {candidate_id}")
+
+
+def _time_range_from_payload(value: dict[str, float]) -> TimeRange:
+    start_seconds = value.get("start_seconds", value.get("startSeconds"))
+    end_seconds = value.get("end_seconds", value.get("endSeconds"))
+    if start_seconds is None or end_seconds is None:
+        raise ValueError("startSeconds and endSeconds are required")
+    return TimeRange(
+        start_seconds=float(start_seconds),
+        end_seconds=float(end_seconds),
+    )
+
+
+def _suggested_segment_from_payload(value: dict[str, object]) -> SuggestedSegment:
+    start_seconds = value.get("start_seconds", value.get("startSeconds"))
+    end_seconds = value.get("end_seconds", value.get("endSeconds"))
+    if start_seconds is None or end_seconds is None:
+        raise ValueError("suggestedSegment startSeconds and endSeconds are required")
+    return SuggestedSegment(
+        start_seconds=float(start_seconds),
+        end_seconds=float(end_seconds),
+        setup_padding_seconds=float(
+            value.get("setup_padding_seconds", value.get("setupPaddingSeconds", 0)),
+        ),
+        resolution_padding_seconds=float(
+            value.get(
+                "resolution_padding_seconds",
+                value.get("resolutionPaddingSeconds", 0),
+            ),
+        ),
+        trim_dead_air_applied=bool(
+            value.get("trim_dead_air_applied", value.get("trimDeadAirApplied", False)),
+        ),
+    )
+
+
+def _validate_time_range(value: TimeRange, duration_seconds: float) -> None:
+    if value.start_seconds < 0 or value.end_seconds <= value.start_seconds:
+        raise ValueError("Invalid candidate time range")
+    if value.end_seconds > duration_seconds:
+        raise ValueError("Candidate time range exceeds the media duration")
+
+
+def _clip_suggested_segment(
+    segment: SuggestedSegment,
+    start_seconds: float,
+    end_seconds: float,
+) -> SuggestedSegment:
+    clipped_start = max(start_seconds, segment.start_seconds)
+    clipped_end = min(end_seconds, segment.end_seconds)
+    if clipped_end <= clipped_start:
+        clipped_start = start_seconds
+        clipped_end = end_seconds
+    return replace(
+        segment,
+        start_seconds=clipped_start,
+        end_seconds=clipped_end,
+    )
+
+
+def _candidate_edit_record(
+    kind: str,
+    note: str,
+    source_candidate_ids: list[str],
+    created_at: str,
+) -> CandidateEditRecord:
+    return CandidateEditRecord(
+        id=f"candidate_edit_{uuid.uuid4().hex[:12]}",
+        kind=kind,
+        note=note,
+        source_candidate_ids=source_candidate_ids,
+        created_at=created_at,
+    )
+
+
+def _join_snippets(left: str, right: str) -> str:
+    if left == right:
+        return left
+    return f"{left} / {right}"
 
 
 # Profile request boundary

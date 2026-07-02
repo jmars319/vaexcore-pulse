@@ -16,12 +16,14 @@ type CandidateProfileMatch = ReturnType<typeof resolveCandidateProfileMatch>;
 
 export function CandidateContextDetails({
   candidate,
+  onCorrectTranscriptChunk,
   profile,
   profileMatch,
   profileMatchingSummary,
   transcript,
 }: {
   candidate: CandidateWindow;
+  onCorrectTranscriptChunk: (chunkId: string, text: string) => void;
   profile: ContentProfile;
   profileMatch: CandidateProfileMatch;
   profileMatchingSummary: ProfileMatchingSummary;
@@ -55,7 +57,11 @@ export function CandidateContextDetails({
         ) : null}
       </article>
 
-      <TranscriptContextPeek candidate={candidate} transcript={transcript} />
+      <TranscriptContextPeek
+        candidate={candidate}
+        onCorrectTranscriptChunk={onCorrectTranscriptChunk}
+        transcript={transcript}
+      />
     </details>
   );
 }
@@ -156,20 +162,28 @@ export function CandidateProfileFitPanel({
 export function CandidateAdjustmentPanel({
   isSavingReview,
   labelDraft,
+  onCreateManualCandidate,
   onExpandResolution,
   onExpandSetup,
   onLabelChange,
+  onMergeWithNextVisible,
+  onRankCandidate,
   onReturnToProjects,
   onSaveLabel,
+  onSplitCandidate,
   pendingCount,
 }: {
   isSavingReview: boolean;
   labelDraft: string;
+  onCreateManualCandidate: () => void;
   onExpandResolution: () => void;
   onExpandSetup: () => void;
   onLabelChange: (value: string) => void;
+  onMergeWithNextVisible: () => void;
+  onRankCandidate: (rankDelta: number) => void;
   onReturnToProjects: () => void;
   onSaveLabel: () => void;
+  onSplitCandidate: () => void;
   pendingCount: number;
 }) {
   return (
@@ -205,6 +219,49 @@ export function CandidateAdjustmentPanel({
             Return to backlog
           </button>
         ) : null}
+      </div>
+
+      <div className="action-row">
+        <button
+          className="button-secondary"
+          disabled={isSavingReview}
+          onClick={() => onRankCandidate(1)}
+          type="button"
+        >
+          Rank higher
+        </button>
+        <button
+          className="button-secondary"
+          disabled={isSavingReview}
+          onClick={() => onRankCandidate(-1)}
+          type="button"
+        >
+          Rank lower
+        </button>
+        <button
+          className="button-secondary"
+          disabled={isSavingReview}
+          onClick={onSplitCandidate}
+          type="button"
+        >
+          Split candidate
+        </button>
+        <button
+          className="button-secondary"
+          disabled={isSavingReview}
+          onClick={onMergeWithNextVisible}
+          type="button"
+        >
+          Merge adjacent
+        </button>
+        <button
+          className="button-secondary"
+          disabled={isSavingReview}
+          onClick={onCreateManualCandidate}
+          type="button"
+        >
+          Duplicate manually
+        </button>
       </div>
 
       <div className="vcp-controls-row vcp-controls-row-label review-label-editor">

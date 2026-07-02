@@ -1,7 +1,6 @@
 import http from "node:http";
 
 export function createMediaLibraryRouteFixture() {
-  // Asset fixture boundary
   const asset = {
     id: "asset_clip_global_001",
     assetType: "CLIP",
@@ -127,7 +126,6 @@ export function createMediaLibraryRouteFixture() {
       ],
     },
   };
-  // Pair fixture boundary
   const pair = {
     id: "pair_story_arc_001",
     vodAssetId: "asset_vod_001",
@@ -146,7 +144,6 @@ export function createMediaLibraryRouteFixture() {
     createdAt: "2026-04-20T12:05:00.000Z",
     updatedAt: "2026-04-20T12:05:00.000Z",
   };
-  // Index job fixture
   const indexJob = {
     id: "index_job_001",
     assetId: asset.id,
@@ -235,7 +232,6 @@ export function createMediaLibraryRouteFixture() {
     createdAt: "2026-04-20T12:10:10.000Z",
     updatedAt: "2026-04-20T12:10:10.000Z",
   };
-  // Alignment fixture boundary
   const alignmentJob = {
     id: "align_job_001",
     pairId: pair.id,
@@ -283,7 +279,6 @@ export function createMediaLibraryRouteFixture() {
     updatedAt: "2026-04-20T12:13:00.000Z",
   };
 
-  // Analyzer route boundary
   const analyzerServer = http.createServer((request, response) => {
     if (request.method === "GET" && request.url === "/library/assets") {
       response.setHeader("content-type", "application/json");

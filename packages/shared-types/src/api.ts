@@ -5,6 +5,7 @@ import {
   mediaLibraryAssetTypeSchema,
   profileStateSchema,
   reviewActionSchema,
+  suggestedSegmentSchema,
   timeRangeSchema,
 } from "./domain";
 
@@ -17,6 +18,14 @@ export const analyzeProjectRequestSchema = z.object({
 
 export const reviewMutationActionSchema = reviewActionSchema.exclude([
   "PENDING",
+]);
+
+export const candidateEditActionSchema = z.enum([
+  "CREATE",
+  "SPLIT",
+  "MERGE",
+  "RANK",
+  "TRANSCRIPT_CORRECTION",
 ]);
 
 export const createClipProfileRequestSchema = z.object({
@@ -162,9 +171,96 @@ export const reviewUpdateRequestSchema = z
     }
   });
 
+export const candidateEditRequestSchema = z
+  .object({
+    sessionId: z.string().trim().min(1, "sessionId is required"),
+    action: candidateEditActionSchema,
+    candidateId: z.string().trim().min(1).optional(),
+    targetCandidateId: z.string().trim().min(1).optional(),
+    label: z.string().trim().min(1).max(160).optional(),
+    transcriptSnippet: z.string().trim().min(1).max(2000).optional(),
+    candidateWindow: timeRangeSchema.optional(),
+    suggestedSegment: suggestedSegmentSchema.optional(),
+    splitSeconds: z.number().nonnegative().optional(),
+    rankDelta: z.number().int().min(-20).max(20).optional(),
+    transcriptChunkId: z.string().trim().min(1).optional(),
+    transcriptText: z.string().trim().min(1).max(4000).optional(),
+    timestamp: z.string().trim().min(1).optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.action === "CREATE") {
+      if (!value.candidateWindow) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "candidateWindow is required for CREATE actions",
+          path: ["candidateWindow"],
+        });
+      }
+      if (!value.suggestedSegment) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "suggestedSegment is required for CREATE actions",
+          path: ["suggestedSegment"],
+        });
+      }
+      if (!value.label) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "label is required for CREATE actions",
+          path: ["label"],
+        });
+      }
+    }
+
+    if (["SPLIT", "MERGE", "RANK"].includes(value.action)) {
+      if (!value.candidateId) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "candidateId is required for this candidate edit",
+          path: ["candidateId"],
+        });
+      }
+    }
+
+    if (value.action === "MERGE" && !value.targetCandidateId) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "targetCandidateId is required for MERGE actions",
+        path: ["targetCandidateId"],
+      });
+    }
+
+    if (value.action === "RANK" && !value.rankDelta) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "rankDelta is required for RANK actions",
+        path: ["rankDelta"],
+      });
+    }
+
+    if (value.action === "TRANSCRIPT_CORRECTION") {
+      if (!value.transcriptChunkId) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "transcriptChunkId is required for transcript corrections",
+          path: ["transcriptChunkId"],
+        });
+      }
+      if (!value.transcriptText) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "transcriptText is required for transcript corrections",
+          path: ["transcriptText"],
+        });
+      }
+    }
+  });
+
 export type AnalyzeProjectRequest = z.infer<typeof analyzeProjectRequestSchema>;
 export type ReviewMutationAction = z.infer<typeof reviewMutationActionSchema>;
 export type ReviewUpdateRequest = z.infer<typeof reviewUpdateRequestSchema>;
+export type CandidateEditAction = z.infer<typeof candidateEditActionSchema>;
+export type CandidateEditRequest = z.infer<typeof candidateEditRequestSchema>;
 export type CreateClipProfileRequest = z.infer<
   typeof createClipProfileRequestSchema
 >;

@@ -3,6 +3,7 @@ import {
   analyzeProjectRequestSchema,
   cancelMediaAlignmentJobRequestSchema,
   cancelMediaIndexJobRequestSchema,
+  candidateEditRequestSchema,
   createMediaAlignmentJobRequestSchema,
   createMediaEditPairRequestSchema,
   createMediaIndexJobRequestSchema,
@@ -14,6 +15,7 @@ import {
   type AnalyzeProjectRequest,
   type CancelMediaAlignmentJobRequest,
   type CancelMediaIndexJobRequest,
+  type CandidateEditRequest,
   type ClipProfile,
   type CreateMediaAlignmentJobRequest,
   type CreateMediaEditPairRequest,
@@ -302,6 +304,20 @@ export async function submitReviewUpdate(
 ): Promise<ProjectSession> {
   const request = reviewUpdateRequestSchema.parse(input);
   const response = await fetchAnalyzer("/review", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
+  return parseSessionResponse(response);
+}
+
+export async function submitCandidateEdit(
+  input: CandidateEditRequest,
+): Promise<ProjectSession> {
+  const request = candidateEditRequestSchema.parse(input);
+  const response = await fetchAnalyzer("/candidates/edit", {
     method: "POST",
     headers: {
       "content-type": "application/json",

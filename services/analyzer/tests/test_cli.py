@@ -42,6 +42,7 @@ from vaexcore_pulse_analyzer.pipeline.ingest import (
 )
 from vaexcore_pulse_analyzer.service import (
     analyze_request,
+    apply_candidate_edit,
     apply_review_update,
     create_profile_request,
     create_media_edit_pair_request,
@@ -840,6 +841,130 @@ class AnalyzerScaffoldTests(unittest.TestCase):
             self.assertEqual(
                 summaries[1]["pending_count"],
                 len(session_a.candidates),
+            )
+
+    def test_candidate_edits_persist_manual_split_rank_and_transcript(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            media_path = Path(temp_dir) / "candidate-edits.mp4"
+            media_path.write_bytes(b"candidate-edit-fixture")
+            transcript_path = Path(temp_dir) / "candidate-edits.srt"
+            transcript_path.write_text(
+                "\n".join(
+                    [
+                        "1",
+                        "00:00:04,000 --> 00:00:08,000",
+                        "wait wait no way this setup worked.",
+                        "",
+                        "2",
+                        "00:00:14,000 --> 00:00:18,000",
+                        "here we go push now.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            database_path = str(Path(temp_dir) / "vaexcore-pulse.sqlite3")
+            session = analyze_request(
+                str(media_path),
+                transcript_path=str(transcript_path),
+                persist=True,
+                database_path=database_path,
+            )
+            candidate = session.candidates[0]
+
+            with_manual = apply_candidate_edit(
+                session.id,
+                action="CREATE",
+                label="Manual anchor",
+                transcript_snippet="Operator-created review marker.",
+                candidate_window={
+                    "start_seconds": candidate.suggested_segment.start_seconds,
+                    "end_seconds": candidate.suggested_segment.end_seconds,
+                },
+                suggested_segment={
+                    "start_seconds": candidate.suggested_segment.start_seconds,
+                    "end_seconds": candidate.suggested_segment.end_seconds,
+                    "setup_padding_seconds": 0,
+                    "resolution_padding_seconds": 0,
+                    "trim_dead_air_applied": False,
+                },
+                database_path=database_path,
+            )
+            self.assertEqual(len(with_manual.candidates), len(session.candidates) + 1)
+            self.assertEqual(with_manual.candidates[-1].editable_label, "Manual anchor")
+            self.assertEqual(
+                with_manual.candidates[-1].edit_history[-1].kind,
+                "MANUAL_CREATE",
+            )
+
+            split_source = with_manual.candidates[0]
+            split_session = apply_candidate_edit(
+                session.id,
+                action="SPLIT",
+                candidate_id=split_source.id,
+                database_path=database_path,
+            )
+            self.assertGreaterEqual(
+                len(
+                    [
+                        item
+                        for item in split_session.candidates
+                        if item.id.startswith(f"{split_source.id}_split_")
+                    ]
+                ),
+                2,
+            )
+
+            ranked_session = apply_candidate_edit(
+                session.id,
+                action="RANK",
+                candidate_id=split_session.candidates[-1].id,
+                rank_delta=2,
+                database_path=database_path,
+            )
+            self.assertGreater(
+                next(
+                    item
+                    for item in ranked_session.candidates
+                    if item.id == split_session.candidates[-1].id
+                ).rank_adjustment,
+                0,
+            )
+
+            corrected_session = apply_candidate_edit(
+                session.id,
+                action="TRANSCRIPT_CORRECTION",
+                transcript_chunk_id=ranked_session.transcript[0].id,
+                transcript_text="wait wait no way this corrected setup worked.",
+                database_path=database_path,
+            )
+            self.assertIn("corrected setup", corrected_session.transcript[0].text)
+            self.assertTrue(
+                any(candidate.edit_history for candidate in corrected_session.candidates)
+            )
+
+    def test_deferred_reviews_do_not_remain_pending(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            media_path = Path(temp_dir) / "defer-pass.mp4"
+            media_path.write_bytes(b"defer-review-fixture")
+            database_path = str(Path(temp_dir) / "vaexcore-pulse.sqlite3")
+            session = analyze_request(
+                str(media_path),
+                persist=True,
+                database_path=database_path,
+            )
+
+            apply_review_update(
+                session.id,
+                session.candidates[0].id,
+                action="DEFER",
+                database_path=database_path,
+            )
+            summaries = list_session_summaries_request(database_path=database_path)
+
+            self.assertEqual(summaries[0]["deferred_count"], 1)
+            self.assertEqual(
+                summaries[0]["pending_count"],
+                len(session.candidates) - 1,
             )
 
 

@@ -17,6 +17,16 @@ export function serializeSessionSnapshot(
   const rejectedCount = session.reviewDecisions.filter(
     (decision) => decision.action === "REJECT",
   ).length;
+  const deferredCount = session.reviewDecisions.filter(
+    (decision) => decision.action === "DEFER",
+  ).length;
+  const pendingCount = session.candidates.filter((candidate) =>
+    isPendingReviewAction(
+      session.reviewDecisions.find(
+        (decision) => decision.candidateId === candidate.id,
+      )?.action,
+    ),
+  ).length;
 
   return {
     id: session.id,
@@ -30,14 +40,16 @@ export function serializeSessionSnapshot(
       candidateCount: session.candidates.length,
       acceptedCount,
       rejectedCount,
-      pendingCount: Math.max(
-        session.candidates.length - acceptedCount - rejectedCount,
-        0,
-      ),
+      deferredCount,
+      pendingCount,
     }),
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
   };
+}
+
+function isPendingReviewAction(action: ReviewDecision["action"] | undefined) {
+  return action !== "ACCEPT" && action !== "REJECT" && action !== "DEFER";
 }
 
 export function serializeReviewDecision(

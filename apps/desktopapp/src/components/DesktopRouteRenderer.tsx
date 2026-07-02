@@ -79,6 +79,7 @@ export type DesktopRouteRendererProps = {
   isExportingToStudio: boolean;
   isLoadingProfiles: boolean;
   isLoadingProjects: boolean;
+  isSavingCandidateEdit: boolean;
   isSavingReview: boolean;
   isStrongMatchFallback: boolean;
   jsonPreview: string;
@@ -88,6 +89,9 @@ export type DesktopRouteRendererProps = {
   onAccept: () => void;
   onAnalyze: () => void;
   onBandFilterChange: (value: ConfidenceBand | "ALL") => void;
+  onCorrectTranscriptChunk: (chunkId: string, text: string) => void;
+  onCreateManualCandidate: () => void;
+  onDefer: () => void;
   onDismissStudioRecording: (recording: StudioIntakeQueueItem) => void;
   onExportAcceptedToStudio: () => void;
   onExpandResolution: () => void;
@@ -106,6 +110,8 @@ export type DesktopRouteRendererProps = {
   onProfileChange: (profileId: string) => void;
   onRefreshStudioIntake: () => void;
   onReject: () => void;
+  onMergeWithNextVisible: () => void;
+  onRankCandidate: (rankDelta: number) => void;
   onRestoreStudioRecording: (recording: StudioIntakeQueueItem) => void;
   onReturnToProjects: () => void;
   onReviewQueueModeChange: (value: ReviewQueueMode) => void;
@@ -116,6 +122,7 @@ export type DesktopRouteRendererProps = {
   onSelectNextPending: () => void;
   onSelectNextVisible: () => void;
   onSelectPreviousVisible: () => void;
+  onSplitCandidate: () => void;
   onSelectedMediaPathChange: (mediaPath: string) => void;
   onSelectedTranscriptPathChange: (transcriptPath: string) => void;
   onSetUpProfile: () => void;
@@ -131,6 +138,7 @@ export type DesktopRouteRendererProps = {
   projectsError: string | null;
   queueCandidates: CandidateWindow[];
   rejectedCount: number;
+  candidateEditError: string | null;
   reviewError: string | null;
   reviewQueueMode: ReviewQueueMode;
   reviewQueueState: ReturnType<typeof summarizeReviewQueueState> | null;
@@ -252,6 +260,7 @@ export function DesktopRouteRenderer(props: DesktopRouteRendererProps) {
       edlPreview={props.edlPreview}
       isCurrentCandidateSentToStudio={props.isCurrentCandidateSentToStudio}
       isExportingToStudio={props.isExportingToStudio}
+      isSavingCandidateEdit={props.isSavingCandidateEdit}
       isSavingReview={props.isSavingReview}
       isStrongMatchFallback={props.isStrongMatchFallback}
       jsonPreview={props.jsonPreview}
@@ -259,6 +268,9 @@ export function DesktopRouteRenderer(props: DesktopRouteRendererProps) {
       nextPendingSession={props.nextPendingSession}
       onAccept={props.onAccept}
       onBandFilterChange={props.onBandFilterChange}
+      onCorrectTranscriptChunk={props.onCorrectTranscriptChunk}
+      onCreateManualCandidate={props.onCreateManualCandidate}
+      onDefer={props.onDefer}
       onExportAcceptedToStudio={props.onExportAcceptedToStudio}
       onExpandResolution={props.onExpandResolution}
       onExpandSetup={props.onExpandSetup}
@@ -267,6 +279,8 @@ export function DesktopRouteRenderer(props: DesktopRouteRendererProps) {
       onOpenNextPendingSession={props.onOpenNextPendingSession}
       onPresentationModeChange={props.onPresentationModeChange}
       onReject={props.onReject}
+      onMergeWithNextVisible={props.onMergeWithNextVisible}
+      onRankCandidate={props.onRankCandidate}
       onReturnToProjects={props.onReturnToProjects}
       onReviewQueueModeChange={props.onReviewQueueModeChange}
       onSaveLabel={props.onSaveLabel}
@@ -275,12 +289,14 @@ export function DesktopRouteRenderer(props: DesktopRouteRendererProps) {
       onSelectNextPending={props.onSelectNextPending}
       onSelectNextVisible={props.onSelectNextVisible}
       onSelectPreviousVisible={props.onSelectPreviousVisible}
+      onSplitCandidate={props.onSplitCandidate}
       pendingReviewCount={props.pendingReviewCount}
       presentationMode={props.presentationMode}
       profileMatchingSummary={props.profileMatchingSummary}
       projectSession={props.projectSession}
       queueCandidates={props.queueCandidates}
       rejectedCount={props.rejectedCount}
+      candidateEditError={props.candidateEditError}
       reviewError={props.reviewError}
       reviewQueueMode={props.reviewQueueMode}
       reviewQueueState={props.reviewQueueState}

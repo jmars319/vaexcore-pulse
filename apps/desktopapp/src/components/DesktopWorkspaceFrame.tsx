@@ -182,6 +182,7 @@ export function DesktopWorkspaceFrame({
           isExportingToStudio={studioExport.isExportingToStudio}
           isLoadingProfiles={isLoadingProfiles}
           isLoadingProjects={review.isLoadingProjects}
+          isSavingCandidateEdit={review.isSavingCandidateEdit}
           isSavingReview={review.isSavingReview}
           isStrongMatchFallback={review.isStrongMatchFallback}
           jsonPreview={review.jsonPreview}
@@ -195,6 +196,9 @@ export function DesktopWorkspaceFrame({
           onAccept={review.handleAccept}
           onAnalyze={onAnalyze}
           onBandFilterChange={review.setBandFilter}
+          onCorrectTranscriptChunk={review.handleCorrectTranscriptChunk}
+          onCreateManualCandidate={review.handleCreateManualCandidate}
+          onDefer={review.handleDefer}
           onDismissStudioRecording={studioIntake.handleDismissStudioRecording}
           onExportAcceptedToStudio={() => {
             void studioExport.handleExportAcceptedToStudio({
@@ -226,6 +230,8 @@ export function DesktopWorkspaceFrame({
             void studioIntake.handleRefreshStudioIntake();
           }}
           onReject={review.handleReject}
+          onMergeWithNextVisible={review.handleMergeWithNextVisible}
+          onRankCandidate={review.handleRankCandidate}
           onRestoreStudioRecording={studioIntake.handleRestoreStudioRecording}
           onReturnToProjects={onReturnToProjects}
           onReviewQueueModeChange={review.handleReviewQueueModeChange}
@@ -236,6 +242,7 @@ export function DesktopWorkspaceFrame({
           onSelectNextPending={review.handleSelectNextPending}
           onSelectNextVisible={review.handleSelectNextVisible}
           onSelectPreviousVisible={review.handleSelectPreviousVisible}
+          onSplitCandidate={review.handleSplitCandidate}
           onSelectedMediaPathChange={onSelectedMediaPathChange}
           onSelectedTranscriptPathChange={onSelectedTranscriptPathChange}
           onSetUpProfile={() => openSettingsWindowFromUi("profile-setup")}
@@ -251,6 +258,7 @@ export function DesktopWorkspaceFrame({
           projectsError={review.projectsError}
           queueCandidates={review.queueCandidates}
           rejectedCount={review.rejectedCount}
+          candidateEditError={review.candidateEditError}
           reviewError={review.reviewError}
           reviewQueueMode={review.reviewQueueMode}
           reviewQueueState={review.reviewQueueState}

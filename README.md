@@ -48,6 +48,8 @@ packages/
 - The desktop app is the primary product-development loop.
 - `dev:pulse` starts analyzer, API, and Tauri desktop after health checks.
 - The Python analyzer is still scaffolded and intentionally lightweight.
+- Real local analysis now records transcript/audio quality signals, duplicate hints, and persistent candidate edit history.
+- The review workstation supports keep, skip, defer, retime, relabel, manual candidate creation, split, merge, rank adjustment, and transcript correction.
 - The API bridge runs from TypeScript with Fastify.
 - Packaging flows produce unsigned local app artifacts and tester handoff material.
 - The web and mobile surfaces are companion-oriented, not the main review station.

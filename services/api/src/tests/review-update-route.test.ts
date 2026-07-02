@@ -120,4 +120,101 @@ describe("api smoke routes", () => {
       await app.close();
     }
   });
+
+  it("proxies candidate edits and returns the updated session", async () => {
+    const analyzerSession = createMockProjectSession();
+    analyzerSession.id = "session_candidate_edit";
+    analyzerSession.title = "Candidate Edit Session";
+    analyzerSession.candidates = analyzerSession.candidates.slice(0, 2);
+    analyzerSession.candidates[0].rankAdjustment = 1;
+    analyzerSession.candidates[0].editHistory = [
+      {
+        id: "candidate_edit_rank",
+        kind: "RANK_ADJUST",
+        note: "Rank adjusted by 1.",
+        sourceCandidateIds: [analyzerSession.candidates[0].id],
+        createdAt: "2026-03-25T14:12:00.000Z",
+      },
+    ];
+
+    let capturedBody = "";
+    const analyzerServer = http.createServer((request, response) => {
+      if (request.method !== "POST" || request.url !== "/candidates/edit") {
+        response.statusCode = 404;
+        response.end();
+        return;
+      }
+
+      request.setEncoding("utf8");
+      request.on("data", (chunk) => {
+        capturedBody += chunk;
+      });
+      request.on("end", () => {
+        response.setHeader("content-type", "application/json");
+        response.end(
+          JSON.stringify({
+            status: "updated",
+            session: analyzerSession,
+          }),
+        );
+      });
+    });
+
+    analyzerServer.listen(0, "127.0.0.1");
+    await once(analyzerServer, "listening");
+
+    const address = analyzerServer.address();
+    if (!address || typeof address === "string") {
+      throw new Error("Failed to bind analyzer test server");
+    }
+
+    process.env.VAEXCORE_PULSE_ANALYZER_URL = `http://127.0.0.1:${address.port}`;
+
+    const app = await buildApp();
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/api/projects/candidates/edit",
+        payload: {
+          sessionId: analyzerSession.id,
+          action: "RANK",
+          candidateId: analyzerSession.candidates[0].id,
+          rankDelta: 1,
+          timestamp: "2026-03-25T14:12:00.000Z",
+        },
+      });
+
+      const payload = response.json() as {
+        id: string;
+        candidates: Array<{
+          editHistory: Array<{
+            kind: string;
+          }>;
+          rankAdjustment: number;
+        }>;
+      };
+
+      assert.equal(response.statusCode, 200);
+      assert.equal(payload.id, analyzerSession.id);
+      assert.equal(payload.candidates[0]?.rankAdjustment, 1);
+      assert.equal(payload.candidates[0]?.editHistory[0]?.kind, "RANK_ADJUST");
+
+      const forwardedRequest = JSON.parse(capturedBody) as {
+        sessionId: string;
+        candidateId: string;
+        action: string;
+        rankDelta: number;
+      };
+      assert.equal(forwardedRequest.sessionId, analyzerSession.id);
+      assert.equal(
+        forwardedRequest.candidateId,
+        analyzerSession.candidates[0].id,
+      );
+      assert.equal(forwardedRequest.action, "RANK");
+      assert.equal(forwardedRequest.rankDelta, 1);
+    } finally {
+      analyzerServer.close();
+      await app.close();
+    }
+  });
 });
