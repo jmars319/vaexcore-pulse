@@ -30,6 +30,7 @@ def analyze_request(
     *,
     profile_id: str = "generic",
     session_title: str | None = None,
+    transcript_path: str | None = None,
     persist: bool = True,
     database_path: str = DEFAULT_DATABASE_PATH,
     settings: Settings | None = None,
@@ -42,6 +43,7 @@ def analyze_request(
         settings=settings or Settings(),
         profile_id=resolved_profile_id,
         session_title=session_title,
+        transcript_path=transcript_path,
     )
     session = _apply_profile_matches(store, session)
 

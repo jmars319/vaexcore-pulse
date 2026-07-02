@@ -77,6 +77,10 @@
     justify-content: flex-start;
   }
 
+  .analysis-file-control {
+    grid-template-columns: 1fr;
+  }
+
   .utility-panel,
   .queue-panel,
   .detail-panel {

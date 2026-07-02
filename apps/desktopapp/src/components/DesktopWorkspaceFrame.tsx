@@ -42,15 +42,18 @@ type DesktopWorkspaceFrameProps = {
   normalizedSelectedMediaPath: string;
   onAnalyze: () => void;
   onPickMedia: () => void;
+  onPickTranscript: () => void;
   onProfileChange: (profileId: string) => void;
   onReturnToProjects: () => void;
   onScanAnotherVideo: () => void;
   onSelectedMediaPathChange: (mediaPath: string) => void;
+  onSelectedTranscriptPathChange: (transcriptPath: string) => void;
   onSelectPage: (page: DesktopPage) => void;
   onTitleChange: (title: string) => void;
   review: ReviewController;
   selectedDraftProfile: ClipProfile;
   selectedMediaPath: string;
+  selectedTranscriptPath: string;
   showStartGuide: boolean;
   startGuide: ReturnType<typeof buildStartGuide>;
   studioExport: StudioExportController;
@@ -74,15 +77,18 @@ export function DesktopWorkspaceFrame({
   normalizedSelectedMediaPath,
   onAnalyze,
   onPickMedia,
+  onPickTranscript,
   onProfileChange,
   onReturnToProjects,
   onScanAnotherVideo,
   onSelectedMediaPathChange,
+  onSelectedTranscriptPathChange,
   onSelectPage,
   onTitleChange,
   review,
   selectedDraftProfile,
   selectedMediaPath,
+  selectedTranscriptPath,
   showStartGuide,
   startGuide,
   studioExport,
@@ -213,6 +219,7 @@ export function DesktopWorkspaceFrame({
             void review.handleOpenProject(sessionId);
           }}
           onPickMedia={onPickMedia}
+          onPickTranscript={onPickTranscript}
           onPresentationModeChange={review.setPresentationMode}
           onProfileChange={onProfileChange}
           onRefreshStudioIntake={() => {
@@ -230,6 +237,7 @@ export function DesktopWorkspaceFrame({
           onSelectNextVisible={review.handleSelectNextVisible}
           onSelectPreviousVisible={review.handleSelectPreviousVisible}
           onSelectedMediaPathChange={onSelectedMediaPathChange}
+          onSelectedTranscriptPathChange={onSelectedTranscriptPathChange}
           onSetUpProfile={() => openSettingsWindowFromUi("profile-setup")}
           onStudioIntakeFilterChange={studioIntake.setStudioIntakeFilter}
           onStudioRecordingImport={studioIntake.handleImportStudioRecording}
@@ -257,6 +265,7 @@ export function DesktopWorkspaceFrame({
           selectedDecision={review.selectedDecision}
           selectedDraftProfile={selectedDraftProfile}
           selectedMediaPath={selectedMediaPath}
+          selectedTranscriptPath={selectedTranscriptPath}
           sessionCandidates={review.sessionCandidates}
           showStartGuide={showStartGuide}
           startGuide={startGuide}

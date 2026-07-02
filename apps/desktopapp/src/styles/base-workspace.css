@@ -355,3 +355,9 @@ h3 {
   display: grid;
   gap: 12px;
 }
+
+.analysis-file-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}

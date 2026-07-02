@@ -7,6 +7,7 @@ Desktopapp is the primary product surface in V1.
 It is the default place for:
 
 - local media selection
+- optional transcript import
 - video scanning
 - moment review
 - reference-guided decision-making
@@ -16,6 +17,7 @@ It is the default place for:
 
 - local project/session creation
 - local media selection
+- transcript import path selection for SRT, VTT, timestamped text, plain text, or JSON
 - scan launch control
 - moment review UI
 - moment detail inspection
@@ -30,6 +32,11 @@ The desktop app centers on four task areas:
 - Review
 - References
 - Backlog
+
+The Start surface can attach an operator-selected transcript file to a scan. The
+analyzer persists imported transcript chunks with the SQLite-backed project
+session, and the session overview labels the imported transcript provenance in
+the ingest notes.
 
 ## macOS Packaging
 

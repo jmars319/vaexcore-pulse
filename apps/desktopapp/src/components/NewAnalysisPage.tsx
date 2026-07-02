@@ -32,10 +32,12 @@ type NewAnalysisPageProps = {
   onAnalyze: () => void;
   onDismissStudioRecording: (recording: StudioIntakeQueueItem) => void;
   onPickMedia: () => void;
+  onPickTranscript: () => void;
   onProfileChange: (profileId: string) => void;
   onRefreshStudioIntake: () => void;
   onRestoreStudioRecording: (recording: StudioIntakeQueueItem) => void;
   onSelectedMediaPathChange: (mediaPath: string) => void;
+  onSelectedTranscriptPathChange: (transcriptPath: string) => void;
   onSetUpProfile: () => void;
   onStudioIntakeFilterChange: (filter: StudioIntakeFilter) => void;
   onStudioRecordingImport: (recording: StudioIntakeQueueItem) => void;
@@ -43,6 +45,7 @@ type NewAnalysisPageProps = {
   projectSession: ProjectSession | null;
   selectedDraftProfile: ClipProfile;
   selectedMediaPath: string;
+  selectedTranscriptPath: string;
   showStartGuide: boolean;
   startGuide: ReturnType<typeof buildStartGuide>;
   studioExportHistory: StudioRecordingExportHistory;
@@ -68,10 +71,12 @@ export function NewAnalysisPage({
   onAnalyze,
   onDismissStudioRecording,
   onPickMedia,
+  onPickTranscript,
   onProfileChange,
   onRefreshStudioIntake,
   onRestoreStudioRecording,
   onSelectedMediaPathChange,
+  onSelectedTranscriptPathChange,
   onSetUpProfile,
   onStudioIntakeFilterChange,
   onStudioRecordingImport,
@@ -79,6 +84,7 @@ export function NewAnalysisPage({
   projectSession,
   selectedDraftProfile,
   selectedMediaPath,
+  selectedTranscriptPath,
   showStartGuide,
   startGuide,
   studioExportHistory,
@@ -139,6 +145,34 @@ export function NewAnalysisPage({
                   ? `Ready: ${analysisSourceName}`
                   : `Unsupported file type. Try: ${supportedInputExtensions.join(", ")}`
                 : `Supported inputs: ${supportedInputExtensions.join(", ")}`}
+            </small>
+          </label>
+
+          <label className="search-block">
+            <span className="input-label">Transcript file</span>
+            <div className="analysis-file-control">
+              <input
+                className="search-input"
+                disabled={isAnalyzing}
+                onChange={(event) =>
+                  onSelectedTranscriptPathChange(event.target.value)
+                }
+                placeholder="/Users/you/Videos/session-2026-03-25.srt"
+                type="text"
+                value={selectedTranscriptPath}
+              />
+              <button
+                className="button-secondary"
+                disabled={isAnalyzing}
+                onClick={onPickTranscript}
+                type="button"
+              >
+                Choose transcript
+              </button>
+            </div>
+            <small className="analysis-field-note">
+              Optional SRT, VTT, timestamped text, plain text, or JSON. Imported
+              transcript text is saved with the review session.
             </small>
           </label>
 
@@ -211,6 +245,18 @@ export function NewAnalysisPage({
                 {analysisTitle.trim()
                   ? "Using your custom name."
                   : "Using the file name by default."}
+              </p>
+            </article>
+            <article className="analysis-summary-card">
+              <span className="detail-label">Transcript</span>
+              <strong>
+                {selectedTranscriptPath.trim()
+                  ? "Imported transcript"
+                  : "Auto/local transcript"}
+              </strong>
+              <p className="analysis-summary-path">
+                {selectedTranscriptPath.trim() ||
+                  "Pulse will use local sidecars, local providers, or deterministic local anchors."}
               </p>
             </article>
           </div>

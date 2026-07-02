@@ -29,21 +29,28 @@ def _read_sidecar_transcript(source_path: Path) -> list[TranscriptChunk]:
     for path in _sidecar_candidates(source_path):
         if not path.exists() or not path.is_file():
             continue
-        suffix = path.suffix.lower()
         try:
-            if suffix == ".json":
-                transcript = _parse_json_transcript(path)
-            elif suffix == ".srt":
-                transcript = _parse_srt(path.read_text(encoding="utf-8"))
-            elif suffix == ".vtt":
-                transcript = _parse_vtt(path.read_text(encoding="utf-8"))
-            else:
-                transcript = _parse_plain_text(path.read_text(encoding="utf-8"))
+            transcript = _parse_transcript_file(path)
         except (OSError, json.JSONDecodeError, ValueError):
             continue
         if transcript:
             return transcript
     return []
+
+
+def read_transcript_file(transcript_path: str | Path) -> list[TranscriptChunk]:
+    path = Path(transcript_path).expanduser().resolve()
+    if not path.exists():
+        raise FileNotFoundError(f"Transcript file not found: {path}")
+    if not path.is_file():
+        raise ValueError(f"Transcript path must point to a regular file: {path}")
+
+    transcript = _parse_transcript_file(path)
+    if not transcript:
+        raise ValueError(
+            f"Transcript file did not contain usable transcript cues: {path.name}"
+        )
+    return transcript
 
 
 def _sidecar_candidates(source_path: Path) -> list[Path]:
@@ -55,6 +62,19 @@ def _sidecar_candidates(source_path: Path) -> list[Path]:
         base.with_suffix(".vtt"),
         base.with_suffix(".txt"),
     ]
+
+
+def _parse_transcript_file(path: Path) -> list[TranscriptChunk]:
+    suffix = path.suffix.lower()
+    if suffix == ".json":
+        return _parse_json_transcript(path)
+    if suffix == ".srt":
+        return _parse_srt(path.read_text(encoding="utf-8"))
+    if suffix == ".vtt":
+        return _parse_vtt(path.read_text(encoding="utf-8"))
+    if suffix in {".txt", ".text"}:
+        return _parse_plain_text(path.read_text(encoding="utf-8"))
+    raise ValueError(f"Unsupported transcript extension: {path.suffix}")
 
 
 def _run_whisper_cli(source_path: Path) -> list[TranscriptChunk]:
@@ -152,11 +172,48 @@ def _parse_vtt(value: str) -> list[TranscriptChunk]:
 
 
 def _parse_plain_text(value: str) -> list[TranscriptChunk]:
+    timestamped = _parse_timestamped_text(value)
+    if timestamped:
+        return timestamped
+
     lines = [line.strip() for line in value.splitlines() if line.strip()]
     return [
         _chunk(index, (index - 1) * 8.0, index * 8.0, line, None)
         for index, line in enumerate(lines, start=1)
     ]
+
+
+def _parse_timestamped_text(value: str) -> list[TranscriptChunk]:
+    records: list[tuple[float, float | None, str]] = []
+    for line in value.splitlines():
+        match = re.match(
+            r"^\s*\[?(?P<start>\d{1,2}:\d{2}(?::\d{2})?(?:[,.]\d{1,3})?)\]?\s*"
+            r"(?:(?:-->|-|to)\s*(?P<end>\d{1,2}:\d{2}(?::\d{2})?(?:[,.]\d{1,3})?)\s*)?"
+            r"(?:[-–:]\s*)?(?P<text>.+?)\s*$",
+            line,
+            re.IGNORECASE,
+        )
+        if not match:
+            continue
+        text = match.group("text").strip()
+        if not text:
+            continue
+        records.append(
+            (
+                _parse_timestamp(match.group("start")),
+                _parse_timestamp(match.group("end"))
+                if match.group("end")
+                else None,
+                text,
+            )
+        )
+
+    transcript: list[TranscriptChunk] = []
+    for index, (start, explicit_end, text) in enumerate(records, start=1):
+        next_start = records[index][0] if index < len(records) else None
+        end = explicit_end or next_start or start + 8.0
+        transcript.append(_chunk(index, start, end, text, None))
+    return transcript
 
 
 def _chunk(

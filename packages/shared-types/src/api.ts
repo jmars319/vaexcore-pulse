@@ -12,6 +12,7 @@ export const analyzeProjectRequestSchema = z.object({
   sourcePath: z.string().trim().min(1, "sourcePath is required"),
   profileId: z.string().trim().min(1).optional(),
   sessionTitle: z.string().trim().min(1).max(160).optional(),
+  transcriptPath: z.string().trim().min(1).optional(),
 });
 
 export const reviewMutationActionSchema = reviewActionSchema.exclude([

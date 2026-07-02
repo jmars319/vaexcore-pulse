@@ -45,6 +45,7 @@ export default function DesktopApp() {
     resolveInitialThemeMode(),
   );
   const [selectedMediaPath, setSelectedMediaPath] = useState("");
+  const [selectedTranscriptPath, setSelectedTranscriptPath] = useState("");
   const [analysisProfileId, setAnalysisProfileId] = useState(defaultProfileId);
   const [analysisTitle, setAnalysisTitle] = useState("");
   const [analysisError, setAnalysisError] = useState<string | null>(null);
@@ -191,8 +192,35 @@ export default function DesktopApp() {
     }
   }
 
+  async function handlePickTranscript() {
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const selection = await open({
+        directory: false,
+        multiple: false,
+        filters: [
+          {
+            name: "Transcript",
+            extensions: ["srt", "vtt", "txt", "text", "json"],
+          },
+        ],
+      });
+
+      if (typeof selection === "string") {
+        setSelectedTranscriptPath(selection);
+        setAnalysisError(null);
+        setActivePage("new-analysis");
+      }
+    } catch {
+      setAnalysisError(
+        "Could not open the transcript picker. You can paste a full transcript path instead.",
+      );
+    }
+  }
+
   function handleUseStudioRecording(recording: StudioRecordingCandidate) {
     setSelectedMediaPath(recording.outputPath);
+    setSelectedTranscriptPath("");
     setAnalysisError(null);
     if (!analysisTitle.trim()) {
       setAnalysisTitle(buildSuggestedSessionTitle(recording.outputPath));
@@ -207,11 +235,13 @@ export default function DesktopApp() {
     }
 
     const normalizedSourcePath = normalizedSelectedMediaPath;
+    const normalizedTranscriptPath = selectedTranscriptPath.trim();
 
     const request = analyzeProjectRequestSchema.parse({
       sourcePath: normalizedSourcePath,
       profileId: analysisProfileId,
       sessionTitle: analysisTitle.trim() || undefined,
+      transcriptPath: normalizedTranscriptPath || undefined,
     }) satisfies AnalyzeProjectRequest;
 
     setIsAnalyzing(true);
@@ -308,6 +338,9 @@ export default function DesktopApp() {
         onPickMedia={() => {
           void handlePickMedia();
         }}
+        onPickTranscript={() => {
+          void handlePickTranscript();
+        }}
         onProfileChange={(profileId) => {
           setAnalysisProfileId(profileId);
           setAnalysisError(null);
@@ -318,6 +351,10 @@ export default function DesktopApp() {
           setSelectedMediaPath(mediaPath);
           setAnalysisError(null);
         }}
+        onSelectedTranscriptPathChange={(transcriptPath) => {
+          setSelectedTranscriptPath(transcriptPath);
+          setAnalysisError(null);
+        }}
         onSelectPage={setActivePage}
         onTitleChange={(title) => {
           setAnalysisTitle(title);
@@ -326,6 +363,7 @@ export default function DesktopApp() {
         review={reviewController}
         selectedDraftProfile={selectedDraftProfile}
         selectedMediaPath={selectedMediaPath}
+        selectedTranscriptPath={selectedTranscriptPath}
         showStartGuide={showStartGuide}
         startGuide={startGuide}
         studioExport={studioExportController}

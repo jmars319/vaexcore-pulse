@@ -101,6 +101,7 @@ export type DesktopRouteRendererProps = {
   onOpenNextPendingSession: () => void;
   onOpenProject: (sessionId: string) => void;
   onPickMedia: () => void;
+  onPickTranscript: () => void;
   onPresentationModeChange: (value: ProfilePresentationMode) => void;
   onProfileChange: (profileId: string) => void;
   onRefreshStudioIntake: () => void;
@@ -116,6 +117,7 @@ export type DesktopRouteRendererProps = {
   onSelectNextVisible: () => void;
   onSelectPreviousVisible: () => void;
   onSelectedMediaPathChange: (mediaPath: string) => void;
+  onSelectedTranscriptPathChange: (transcriptPath: string) => void;
   onSetUpProfile: () => void;
   onStudioIntakeFilterChange: (filter: StudioIntakeFilter) => void;
   onStudioRecordingImport: (recording: StudioIntakeQueueItem) => void;
@@ -141,6 +143,7 @@ export type DesktopRouteRendererProps = {
   selectedDecision: ReviewDecision | undefined;
   selectedDraftProfile: ClipProfile;
   selectedMediaPath: string;
+  selectedTranscriptPath: string;
   sessionCandidates: CandidateWindow[];
   showStartGuide: boolean;
   startGuide: ReturnType<typeof buildStartGuide>;
@@ -214,10 +217,12 @@ export function DesktopRouteRenderer(props: DesktopRouteRendererProps) {
         onAnalyze={props.onAnalyze}
         onDismissStudioRecording={props.onDismissStudioRecording}
         onPickMedia={props.onPickMedia}
+        onPickTranscript={props.onPickTranscript}
         onProfileChange={props.onProfileChange}
         onRefreshStudioIntake={props.onRefreshStudioIntake}
         onRestoreStudioRecording={props.onRestoreStudioRecording}
         onSelectedMediaPathChange={props.onSelectedMediaPathChange}
+        onSelectedTranscriptPathChange={props.onSelectedTranscriptPathChange}
         onSetUpProfile={props.onSetUpProfile}
         onStudioIntakeFilterChange={props.onStudioIntakeFilterChange}
         onStudioRecordingImport={props.onStudioRecordingImport}
@@ -225,6 +230,7 @@ export function DesktopRouteRenderer(props: DesktopRouteRendererProps) {
         projectSession={props.projectSession}
         selectedDraftProfile={props.selectedDraftProfile}
         selectedMediaPath={props.selectedMediaPath}
+        selectedTranscriptPath={props.selectedTranscriptPath}
         showStartGuide={props.showStartGuide}
         startGuide={props.startGuide}
         studioExportHistory={props.studioExportHistory}

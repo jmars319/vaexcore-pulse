@@ -21,6 +21,7 @@ describe("api smoke routes", () => {
     analyzerSession.title = "Backlog VOD Review";
     analyzerSession.mediaSource.path = "/tmp/backlog-vod.mkv";
     analyzerSession.mediaSource.fileName = "backlog-vod.mkv";
+    let forwardedBody: Record<string, unknown> | null = null;
 
     const analyzerServer = http.createServer((request, response) => {
       if (request.method !== "POST" || request.url !== "/analyze") {
@@ -29,13 +30,21 @@ describe("api smoke routes", () => {
         return;
       }
 
-      response.setHeader("content-type", "application/json");
-      response.end(
-        JSON.stringify({
-          status: "completed",
-          session: analyzerSession,
-        }),
-      );
+      let body = "";
+      request.setEncoding("utf8");
+      request.on("data", (chunk: string) => {
+        body += chunk;
+      });
+      request.on("end", () => {
+        forwardedBody = JSON.parse(body) as Record<string, unknown>;
+        response.setHeader("content-type", "application/json");
+        response.end(
+          JSON.stringify({
+            status: "completed",
+            session: analyzerSession,
+          }),
+        );
+      });
     });
 
     analyzerServer.listen(0, "127.0.0.1");
@@ -57,6 +66,7 @@ describe("api smoke routes", () => {
           sourcePath: "/tmp/backlog-vod.mkv",
           profileId: "generic",
           sessionTitle: "Backlog VOD Review",
+          transcriptPath: "/tmp/backlog-vod.srt",
         },
       });
 
@@ -72,6 +82,13 @@ describe("api smoke routes", () => {
       assert.equal(payload.id, "session_media_backlog");
       assert.equal(payload.title, "Backlog VOD Review");
       assert.equal(payload.mediaSource.path, "/tmp/backlog-vod.mkv");
+      assert.deepEqual(forwardedBody, {
+        sourcePath: "/tmp/backlog-vod.mkv",
+        profileId: "generic",
+        sessionTitle: "Backlog VOD Review",
+        transcriptPath: "/tmp/backlog-vod.srt",
+        persist: true,
+      });
     } finally {
       analyzerServer.close();
       await app.close();

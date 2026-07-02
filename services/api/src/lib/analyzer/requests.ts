@@ -65,6 +65,7 @@ export async function requestAnalyzerSession(
       sourcePath: request.sourcePath,
       profileId: request.profileId ?? "generic",
       sessionTitle: request.sessionTitle,
+      transcriptPath: request.transcriptPath,
       persist: true,
     }),
   });

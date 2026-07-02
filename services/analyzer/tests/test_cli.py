@@ -33,6 +33,7 @@ from vaexcore_pulse_analyzer.pipeline.indexing import (
     build_decoded_audio_fingerprint_artifact_from_pcm,
 )
 from vaexcore_pulse_analyzer.pipeline.ingest import (
+    INGEST_NOTE_IMPORTED_TRANSCRIPT,
     INGEST_NOTE_SEEDED_TRANSCRIPT,
     INGEST_NOTE_TRANSCRIPT_COMPLETED,
     INGEST_NOTE_TRANSCRIPT_PROVIDER_UNAVAILABLE,
@@ -237,6 +238,57 @@ class AnalyzerScaffoldTests(unittest.TestCase):
             self.assertNotIn(
                 "SEEDED_TRANSCRIPT",
                 [flag.value for flag in session.analysis_coverage.flags],
+            )
+
+    def test_real_file_request_imports_operator_transcript_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            media_path = Path(temp_dir) / "backlog-pass-03.mp4"
+            media_path.write_bytes(b"not-a-real-video-but-a-real-local-path")
+            transcript_path = Path(temp_dir) / "operator-review.txt"
+            transcript_path.write_text(
+                "\n".join(
+                    [
+                        "00:00:04 - Clutch setup from imported notes.",
+                        "00:00:14 - Imported payoff line lands cleanly.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            session = analyze_request(
+                str(media_path),
+                profile_id="generic",
+                session_title="Backlog pass 03",
+                transcript_path=str(transcript_path),
+                persist=True,
+                database_path=str(Path(temp_dir) / "vaexcore-pulse.sqlite3"),
+            )
+
+            transcript_text = " ".join(chunk.text for chunk in session.transcript)
+            self.assertIn("Clutch setup", transcript_text)
+            self.assertIn("Imported payoff", transcript_text)
+            self.assertEqual(session.transcript[0].start_seconds, 4.0)
+            self.assertEqual(session.transcript[0].end_seconds, 14.0)
+            self.assertIn(
+                INGEST_NOTE_IMPORTED_TRANSCRIPT,
+                session.media_source.ingest_notes,
+            )
+            self.assertNotIn(
+                INGEST_NOTE_SEEDED_TRANSCRIPT,
+                session.media_source.ingest_notes,
+            )
+            self.assertNotIn(
+                "SEEDED_TRANSCRIPT",
+                [flag.value for flag in session.analysis_coverage.flags],
+            )
+
+            saved = load_session_request(
+                session.id,
+                database_path=str(Path(temp_dir) / "vaexcore-pulse.sqlite3"),
+            )
+            self.assertIn(
+                "Imported payoff",
+                " ".join(chunk.text for chunk in saved.transcript),
             )
 
     @unittest.skipUnless(hasattr(os, "mkfifo"), "mkfifo unavailable on this platform")

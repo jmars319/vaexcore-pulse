@@ -23,6 +23,7 @@ def analyze_media(
     settings: Settings,
     profile_id: str = "generic",
     session_title: str | None = None,
+    transcript_path: str | None = None,
 ) -> ProjectSession:
     if settings.use_mock_data:
         session = build_mock_session(settings)
@@ -36,7 +37,7 @@ def analyze_media(
         media_source.duration_seconds,
         settings.micro_window_seconds,
     )
-    transcript = generate_transcript(media_source, settings)
+    transcript = generate_transcript(media_source, settings, transcript_path)
     speech_regions = estimate_speech_regions(transcript)
     feature_windows = extract_feature_windows(micro_windows, transcript, speech_regions)
     candidate_seeds = generate_candidate_seeds(

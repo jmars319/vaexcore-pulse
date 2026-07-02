@@ -43,6 +43,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional session title override.",
     )
+    parser.add_argument(
+        "--transcript",
+        default=None,
+        help="Optional local transcript path to import for this analysis.",
+    )
     return parser
 
 
@@ -66,6 +71,7 @@ def main() -> int:
             args.source,
             profile_id=args.profile,
             session_title=args.title,
+            transcript_path=args.transcript,
             persist=args.persist,
             database_path=args.database,
             settings=settings,
@@ -76,6 +82,7 @@ def main() -> int:
             args.source or "",
             profile_id=args.profile,
             session_title=args.title,
+            transcript_path=args.transcript,
             persist=True,
             database_path=args.database,
             settings=settings,

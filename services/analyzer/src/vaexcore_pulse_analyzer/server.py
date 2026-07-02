@@ -358,6 +358,8 @@ class AnalyzerRequestHandler(BaseHTTPRequestHandler):
             profile_id = str(payload.get("profileId", "generic")).strip() or "generic"
             session_title = payload.get("sessionTitle")
             session_title = str(session_title).strip() if session_title else None
+            transcript_path = payload.get("transcriptPath")
+            transcript_path = str(transcript_path).strip() if transcript_path else None
             persist = bool(payload.get("persist", True))
             database_path = self._database_path_from_payload(payload)
 
@@ -366,6 +368,7 @@ class AnalyzerRequestHandler(BaseHTTPRequestHandler):
                     source_path,
                     profile_id=profile_id,
                     session_title=session_title,
+                    transcript_path=transcript_path,
                     persist=persist,
                     database_path=database_path,
                     settings=Settings(),
