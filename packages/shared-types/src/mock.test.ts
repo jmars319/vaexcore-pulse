@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { createPulseDemoContentPack } from "./demoContent";
 import { projectSessionSchema } from "./index";
 import {
   createMockProjectSession,
@@ -61,5 +62,14 @@ describe("shared-types mock data", () => {
       assert.equal(decision.projectSessionId, session.id);
       assert.equal(candidateIds.has(decision.candidateId), true);
     }
+  });
+
+  it("creates a demo content pack for onboarding and smoke validation", () => {
+    const pack = createPulseDemoContentPack();
+
+    assert.equal(pack.schema, "vaexcore.pulse.demo-content-pack.v1");
+    assert.ok(pack.sessions.length >= 3);
+    assert.ok(pack.reviewDecisions.length >= 2);
+    assert.ok(pack.smokeChecklist.some((item) => item.includes("Search")));
   });
 });

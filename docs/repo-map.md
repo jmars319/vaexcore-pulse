@@ -31,7 +31,7 @@ This repo is organized as a real monorepo, not a single-app prototype.
 - `packages/profiles`
   - content weighting presets
 - `packages/export`
-  - export helpers
+  - export helpers, presets, and batch package builders
 - `packages/ai-assist`
   - optional AI enhancements only
 - `scripts`

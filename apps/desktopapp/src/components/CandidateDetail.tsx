@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { PulseBatchExportPackage } from "@vaexcore/pulse-export";
 import type {
   CandidateWindow,
   ContentProfile,
@@ -27,6 +28,7 @@ import {
 import { ReviewCompletionPanel } from "./ReviewCompletionPanel";
 
 type CandidateDetailProps = {
+  batchExportPackage: PulseBatchExportPackage | null;
   candidate: CandidateWindow | null;
   decision: ReviewDecision | undefined;
   profile: ContentProfile;
@@ -79,6 +81,7 @@ type CandidateDetailProps = {
 };
 
 export function CandidateDetail({
+  batchExportPackage,
   candidate,
   decision,
   profile,
@@ -156,6 +159,24 @@ export function CandidateDetail({
     }
   }
 
+  async function handleCopyBatchExportPackage() {
+    if (!batchExportPackage) {
+      setCopyFeedback("No batch export package is ready yet.");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(
+        JSON.stringify(batchExportPackage, null, 2),
+      );
+      setCopyFeedback(
+        `Copied ${batchExportPackage.fileCount} export files as one JSON package.`,
+      );
+    } catch {
+      setCopyFeedback("Copy failed on this machine.");
+    }
+  }
+
   return (
     <section className="detail-panel glass-panel">
       <CandidateDetailHeader
@@ -206,6 +227,7 @@ export function CandidateDetail({
 
       <ReviewCompletionPanel
         canExportAcceptedToStudio={canExportAcceptedToStudio}
+        batchExportPackage={batchExportPackage}
         copyFeedback={copyFeedback}
         edlPreview={edlPreview}
         exportPreview={exportPreview}
@@ -214,6 +236,7 @@ export function CandidateDetail({
         jsonPreview={jsonPreview}
         nextPendingSession={nextPendingSession}
         onCopyExport={handleCopyExport}
+        onCopyBatchExportPackage={handleCopyBatchExportPackage}
         onExportAcceptedToStudio={onExportAcceptedToStudio}
         onOpenNextPendingSession={onOpenNextPendingSession}
         onReturnToProjects={onReturnToProjects}

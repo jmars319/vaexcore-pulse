@@ -16,6 +16,7 @@ import {
   mediaIndexArtifactSchema,
   mediaIndexJobSchema,
   mediaLibraryAssetSchema,
+  projectSessionSearchResultSchema,
   projectSessionSchema,
   projectSessionSummarySchema,
   replaceMediaThumbnailOutputsRequestSchema,
@@ -38,6 +39,7 @@ import {
   type MediaIndexJob,
   type MediaLibraryAsset,
   type ProjectSession,
+  type ProjectSessionSearchResult,
   type ProjectSessionSummary,
   type ReplaceMediaThumbnailOutputsRequest,
   type ReviewUpdateRequest,
@@ -52,6 +54,11 @@ type AnalyzerSessionEnvelope = {
 type AnalyzerSessionListEnvelope = {
   message?: string;
   sessions?: unknown;
+};
+
+type AnalyzerSessionSearchEnvelope = {
+  message?: string;
+  results?: unknown;
 };
 
 type AnalyzerProfileEnvelope = {
@@ -159,6 +166,25 @@ export async function parseSessionSummaryListResponse(
 
   return parseWithSchema("sessions", () =>
     projectSessionSummarySchema.array().parse(payload?.sessions),
+  );
+}
+
+export async function parseSessionSearchResponse(
+  response: Response,
+): Promise<ProjectSessionSearchResult[]> {
+  const payload = (await response
+    .json()
+    .catch(() => null)) as AnalyzerSessionSearchEnvelope | null;
+
+  if (!response.ok) {
+    throw new AnalyzerBridgeError(
+      payload?.message ?? "Analyzer request failed",
+      response.status,
+    );
+  }
+
+  return parseWithSchema("session search results", () =>
+    projectSessionSearchResultSchema.array().parse(payload?.results),
   );
 }
 

@@ -7,6 +7,7 @@ import {
 import {
   AnalyzerBridgeError,
   requestAnalyzerSession,
+  requestSessionSearchResults,
   requestSessionSummaries,
   requestStoredSession,
   submitCandidateEdit,
@@ -49,6 +50,31 @@ export const projectRoutes: FastifyPluginAsync = async (fastify) => {
       projectId: session.id,
       candidates: session.candidates,
     };
+  });
+
+  fastify.get("/api/projects/search", async (request, reply) => {
+    const query = String((request.query as { q?: string }).q ?? "").trim();
+    if (!query) {
+      return reply.code(200).send([]);
+    }
+
+    try {
+      const results = await requestSessionSearchResults(query);
+      return reply.code(200).send(results);
+    } catch (error) {
+      if (error instanceof AnalyzerBridgeError) {
+        const statusCode = error.statusCode >= 500 ? 502 : error.statusCode;
+        return reply.code(statusCode).send({
+          error: "session_search_failed",
+          message: error.message,
+        });
+      }
+
+      return reply.code(500).send({
+        error: "session_search_failed",
+        message: "Unexpected analyzer bridge failure",
+      });
+    }
   });
 
   fastify.post("/api/projects/analyze", async (request, reply) => {

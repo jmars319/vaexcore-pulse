@@ -8,6 +8,7 @@ The API service is the stable bridge between UI apps and backend logic.
 
 - `GET /health`
 - `GET /api/projects`
+- `GET /api/projects/search?q=...`
 - `GET /api/candidates/current`
 - `GET /api/profiles`
 - `GET /api/bridge/analyzer`
@@ -21,6 +22,11 @@ to a local SRT, VTT, timestamped text, plain text, or JSON transcript file and i
 forwarded only to the local analyzer service. Session responses include
 `analysisProvenance` so UI clients can distinguish mock, real, partial, and
 failed local analyzer signal coverage.
+
+`GET /api/projects/search` searches persisted analyzer sessions and returns
+ranked library matches with matched fields and snippets. The search covers
+session names, media paths, transcripts, candidate labels, review tags,
+decisions, decision notes, and accepted export labels.
 
 `POST /api/projects/review` records review decisions for keep, skip, defer,
 retime, and relabel. Accepted decisions are the only decisions exported as kept

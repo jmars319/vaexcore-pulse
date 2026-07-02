@@ -85,6 +85,32 @@ def list_session_summaries_request(
     return store.list_session_summaries()
 
 
+def search_sessions_request(
+    query: str,
+    *,
+    database_path: str = DEFAULT_DATABASE_PATH,
+    limit: int = 50,
+) -> list[dict[str, object]]:
+    normalized_query = query.strip().lower()
+    if not normalized_query:
+        return []
+
+    store = SessionStore(database_path)
+    store.initialize()
+    results: list[dict[str, object]] = []
+    for session_id in store.list_session_ids():
+        session = store.load_session(session_id)
+        result = _search_session(session, normalized_query)
+        if result:
+            results.append(result)
+
+    results.sort(
+        key=lambda result: (int(result["score"]), str(result["updated_at"])),
+        reverse=True,
+    )
+    return results[:limit]
+
+
 def apply_review_update(
     session_id: str,
     candidate_id: str,
@@ -143,6 +169,81 @@ def apply_review_update(
     if _profile_matches_changed(previous_snapshot, hydrated_session):
         store.save_session(hydrated_session)
     return hydrated_session
+
+
+def _search_session(
+    session: ProjectSession,
+    normalized_query: str,
+) -> dict[str, object] | None:
+    matched_fields: set[str] = set()
+    snippets: list[str] = []
+    score = 0
+
+    def collect(field: str, value: object, weight: int = 1) -> None:
+        nonlocal score
+        text = str(value or "")
+        if not text or normalized_query not in text.lower():
+            return
+        matched_fields.add(field)
+        score += weight
+        if len(snippets) < 4:
+            snippets.append(_snippet(text, normalized_query))
+
+    collect("title", session.title, 5)
+    collect("source", session.media_source.file_name, 4)
+    collect("source", session.media_source.path, 3)
+    collect("profile", session.profile_id, 2)
+    for transcript in session.transcript:
+        collect("transcript", transcript.text, 3)
+    for candidate in session.candidates:
+        collect("candidate", candidate.editable_label, 3)
+        collect("candidate", candidate.transcript_snippet, 2)
+        collect("candidate", " ".join(reason.value for reason in candidate.reason_codes), 1)
+        collect("tag", " ".join(tag.value for tag in candidate.review_tags), 2)
+    for decision in session.review_decisions:
+        collect("decision", decision.action.value, 1)
+        collect("decision", decision.label, 3)
+        collect("decision", decision.notes, 2)
+    collect("export", " ".join(decision.label or "" for decision in session.review_decisions), 2)
+
+    if score == 0:
+        return None
+
+    accepted_count = sum(1 for decision in session.review_decisions if decision.action == ReviewAction.ACCEPT)
+    rejected_count = sum(1 for decision in session.review_decisions if decision.action == ReviewAction.REJECT)
+    deferred_count = sum(1 for decision in session.review_decisions if decision.action == ReviewAction.DEFER)
+    candidate_count = len(session.candidates)
+    return {
+        "session_id": session.id,
+        "session_title": session.title,
+        "source_name": session.media_source.file_name,
+        "source_path": session.media_source.path,
+        "profile_id": session.profile_id,
+        "updated_at": session.updated_at,
+        "score": score,
+        "matched_fields": sorted(matched_fields),
+        "snippets": snippets,
+        "candidate_count": candidate_count,
+        "accepted_count": accepted_count,
+        "rejected_count": rejected_count,
+        "deferred_count": deferred_count,
+        "pending_count": max(
+            candidate_count - accepted_count - rejected_count - deferred_count,
+            0,
+        ),
+    }
+
+
+def _snippet(value: str, normalized_query: str) -> str:
+    lower_value = value.lower()
+    index = lower_value.find(normalized_query)
+    if index < 0:
+        return value[:160]
+    start = max(0, index - 60)
+    end = min(len(value), index + len(normalized_query) + 80)
+    prefix = "..." if start > 0 else ""
+    suffix = "..." if end < len(value) else ""
+    return f"{prefix}{value[start:end].strip()}{suffix}"
 
 
 def apply_candidate_edit(

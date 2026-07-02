@@ -1,3 +1,4 @@
+import type { PulseBatchExportPackage } from "@vaexcore/pulse-export";
 import type { ProjectSessionSummary } from "@vaexcore/pulse-shared-types";
 
 type StudioRecordingExportHistory = {
@@ -9,6 +10,7 @@ type StudioRecordingExportHistory = {
 };
 
 type ReviewCompletionPanelProps = {
+  batchExportPackage: PulseBatchExportPackage | null;
   canExportAcceptedToStudio: boolean;
   copyFeedback: string | null;
   edlPreview: string;
@@ -21,6 +23,7 @@ type ReviewCompletionPanelProps = {
     format: "timestamps" | "json" | "edl",
     value: string,
   ) => Promise<void> | void;
+  onCopyBatchExportPackage: () => Promise<void> | void;
   onExportAcceptedToStudio: () => void;
   onOpenNextPendingSession: () => void;
   onReturnToProjects: () => void;
@@ -30,6 +33,7 @@ type ReviewCompletionPanelProps = {
 };
 
 export function ReviewCompletionPanel({
+  batchExportPackage,
   canExportAcceptedToStudio,
   copyFeedback,
   edlPreview,
@@ -39,6 +43,7 @@ export function ReviewCompletionPanel({
   jsonPreview,
   nextPendingSession,
   onCopyExport,
+  onCopyBatchExportPackage,
   onExportAcceptedToStudio,
   onOpenNextPendingSession,
   onReturnToProjects,
@@ -97,6 +102,17 @@ export function ReviewCompletionPanel({
                 Copy EDL
               </button>
             ) : null}
+            {batchExportPackage ? (
+              <button
+                className="button-secondary"
+                onClick={() => {
+                  void onCopyBatchExportPackage();
+                }}
+                type="button"
+              >
+                Copy export package
+              </button>
+            ) : null}
             <button
               className="button-secondary"
               disabled={!canExportAcceptedToStudio || isExportingToStudio}
@@ -128,6 +144,22 @@ export function ReviewCompletionPanel({
             <p className="review-status-copy">
               This selected moment is confirmed in Studio.
             </p>
+          ) : null}
+          {batchExportPackage ? (
+            <div className="export-package-summary">
+              <span className="detail-label">Batch package</span>
+              <p>
+                {batchExportPackage.fileCount} files for{" "}
+                {batchExportPackage.acceptedMomentCount} kept moments.
+              </p>
+              <ul>
+                {batchExportPackage.files.map((file) => (
+                  <li key={file.fileName}>
+                    {file.fileName} - {file.description}
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : null}
           <details className="internal-details nested-export-details">
             <summary className="internal-details-summary">

@@ -63,9 +63,29 @@ export const projectSessionSummarySchema = z.object({
   pendingCount: z.number().int().nonnegative(),
 });
 
+export const projectSessionSearchResultSchema = z.object({
+  sessionId: z.string(),
+  sessionTitle: z.string(),
+  sourceName: z.string(),
+  sourcePath: z.string(),
+  profileId: z.string(),
+  updatedAt: z.string(),
+  score: z.number().nonnegative(),
+  matchedFields: z.array(z.string()),
+  snippets: z.array(z.string()),
+  candidateCount: z.number().int().nonnegative(),
+  acceptedCount: z.number().int().nonnegative(),
+  rejectedCount: z.number().int().nonnegative(),
+  deferredCount: z.number().int().nonnegative().default(0),
+  pendingCount: z.number().int().nonnegative(),
+});
+
 export type Settings = z.infer<typeof settingsSchema>;
 export type ProjectSession = z.infer<typeof projectSessionSchema>;
 export type ProjectSessionSummary = z.infer<typeof projectSessionSummarySchema>;
+export type ProjectSessionSearchResult = z.infer<
+  typeof projectSessionSearchResultSchema
+>;
 
 export const defaultSettings: Settings = {
   microWindowSeconds: 2,

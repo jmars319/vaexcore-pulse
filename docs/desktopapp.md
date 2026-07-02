@@ -23,7 +23,8 @@ It is the default place for:
 - moment detail inspection
 - keep / skip / defer / adjust / rename flow
 - manual candidate creation, split, merge, rank adjustment, and transcript correction
-- export entrypoint
+- searchable saved-session library grouped by profile
+- export entrypoint with timestamp, YouTube chapter, shorts CSV, editor handoff, JSON evidence, and EDL presets
 
 ## Current Navigation
 
@@ -45,6 +46,17 @@ skips it, `d` defers it, `n` jumps to the next undecided candidate, `j` and `l`
 move across visible candidates, and `[` / `]` expand the clip boundary. Optional
 candidate edit controls are persisted through the analyzer-backed SQLite session
 store rather than browser state.
+
+The Backlog surface searches persisted analyzer sessions through the local API.
+Search covers session names, media paths, transcript text, candidate labels,
+review tags, decisions, decision notes, and accepted export labels. Results stay
+grouped by profile so library organization remains useful as the session count
+grows.
+
+Completed sessions expose individual copy actions plus a batch export package.
+The package is a JSON bundle containing the generated preset files and their
+metadata; it is intended for manual editor/client handoff until a richer file
+archive UI lands.
 
 ## macOS Packaging
 

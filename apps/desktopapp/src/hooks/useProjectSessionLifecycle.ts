@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useDeferredValue,
   useMemo,
   useRef,
   useState,
@@ -12,6 +13,7 @@ import {
 } from "@vaexcore/pulse-domain";
 import type {
   ProjectSession,
+  ProjectSessionSearchResult,
   ProjectSessionSummary,
 } from "@vaexcore/pulse-shared-types";
 import {
@@ -54,9 +56,18 @@ export function useProjectSessionLifecycle({
   const [projectSummaries, setProjectSummaries] = useState<
     ProjectSessionSummary[]
   >([]);
+  const [projectSearchValue, setProjectSearchValue] = useState("");
+  const [projectSearchResults, setProjectSearchResults] = useState<
+    ProjectSessionSearchResult[]
+  >([]);
+  const [isSearchingProjects, setIsSearchingProjects] = useState(false);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [projectSearchError, setProjectSearchError] = useState<string | null>(
+    null,
+  );
   const applyProjectSessionRef = useRef(applyProjectSession);
+  const deferredProjectSearchValue = useDeferredValue(projectSearchValue);
 
   useEffect(() => {
     applyProjectSessionRef.current = applyProjectSession;
@@ -127,6 +138,54 @@ export function useProjectSessionLifecycle({
       isCancelled = true;
     };
   }, [apiBaseUrl, isPulseReady, setActivePage]);
+
+  useEffect(() => {
+    if (!isPulseReady) {
+      setProjectSearchResults([]);
+      setIsSearchingProjects(false);
+      setProjectSearchError(null);
+      return;
+    }
+
+    const query = deferredProjectSearchValue.trim();
+    if (query.length < 2) {
+      setProjectSearchResults([]);
+      setIsSearchingProjects(false);
+      setProjectSearchError(null);
+      return;
+    }
+
+    let isCancelled = false;
+
+    async function loadSearchResults() {
+      setIsSearchingProjects(true);
+      try {
+        const { fetchProjectSearchResults } =
+          await import("../lib/pulseProjectSearchApi");
+        const results = await fetchProjectSearchResults(apiBaseUrl, query);
+        if (isCancelled) return;
+        setProjectSearchResults(results);
+        setProjectSearchError(null);
+      } catch (error) {
+        if (isCancelled) return;
+        setProjectSearchError(
+          error instanceof Error
+            ? `Unable to search saved sessions: ${error.message}`
+            : "Unable to search saved sessions",
+        );
+      } finally {
+        if (!isCancelled) {
+          setIsSearchingProjects(false);
+        }
+      }
+    }
+
+    void loadSearchResults();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [apiBaseUrl, deferredProjectSearchValue, isPulseReady]);
 
   useEffect(() => {
     if (!isPulseReady) {
@@ -216,10 +275,15 @@ export function useProjectSessionLifecycle({
     handleOpenNextPendingSession,
     handleOpenProject,
     isLoadingProjects,
+    isSearchingProjects,
     nextPendingSession,
     pendingSessionCount,
+    projectSearchError,
+    projectSearchResults,
+    projectSearchValue,
     projectSummaries,
     projectsError,
+    setProjectSearchValue,
     setProjectSummaries,
     setProjectsError,
   };

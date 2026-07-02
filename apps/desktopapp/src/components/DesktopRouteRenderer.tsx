@@ -11,6 +11,7 @@ import type {
   ProfileMatchingSummary,
   ProfilePresentationMode,
   ProjectSession,
+  ProjectSessionSearchResult,
   ProjectSessionSummary,
   ReviewDecision,
 } from "@vaexcore/pulse-shared-types";
@@ -60,7 +61,6 @@ export type DesktopRouteRendererProps = {
   activePage: DesktopPage;
   activeSessionReviewState: SessionReviewState | null;
   activeSessionReviewStateLabel: string | null;
-  activeSessionReviewStateLabelText: string | null;
   analysisError: string | null;
   analysisLaunchState: ReturnType<typeof buildAnalysisLaunchState>;
   analysisProfileId: string;
@@ -79,6 +79,7 @@ export type DesktopRouteRendererProps = {
   isExportingToStudio: boolean;
   isLoadingProfiles: boolean;
   isLoadingProjects: boolean;
+  isSearchingProjects: boolean;
   isSavingCandidateEdit: boolean;
   isSavingReview: boolean;
   isStrongMatchFallback: boolean;
@@ -118,6 +119,7 @@ export type DesktopRouteRendererProps = {
   onSaveLabel: () => void;
   onScanAnotherVideo: () => void;
   onSearchChange: (value: string) => void;
+  onProjectSearchChange: (value: string) => void;
   onSelectCandidate: (candidateId: string) => void;
   onSelectNextPending: () => void;
   onSelectNextVisible: () => void;
@@ -132,6 +134,9 @@ export type DesktopRouteRendererProps = {
   pendingReviewCount: number;
   pendingSessionCount: number;
   presentationMode: ProfilePresentationMode;
+  projectSearchError: string | null;
+  projectSearchResults: ProjectSessionSearchResult[];
+  projectSearchValue: string;
   profileMatchingSummary: ProfileMatchingSummary;
   projectSession: ProjectSession | null;
   projectSummaries: ProjectSessionSummary[];
@@ -195,11 +200,16 @@ export function DesktopRouteRenderer(props: DesktopRouteRendererProps) {
         activeSessionId={props.projectSession?.id ?? null}
         availableProfiles={props.availableProfiles}
         isLoadingProjects={props.isLoadingProjects}
+        isSearchingProjects={props.isSearchingProjects}
         nextPendingSession={props.nextPendingSession}
         onOpenNextPendingSession={props.onOpenNextPendingSession}
         onOpenProject={props.onOpenProject}
+        onSearchChange={props.onProjectSearchChange}
         onScanAnotherVideo={props.onScanAnotherVideo}
         pendingSessionCount={props.pendingSessionCount}
+        projectSearchError={props.projectSearchError}
+        projectSearchResults={props.projectSearchResults}
+        projectSearchValue={props.projectSearchValue}
         projectSummaries={props.projectSummaries}
         projectsError={props.projectsError}
       />
@@ -209,7 +219,7 @@ export function DesktopRouteRenderer(props: DesktopRouteRendererProps) {
   if (props.activePage === "new-analysis") {
     return (
       <NewAnalysisPage
-        activeSessionReviewStateLabel={props.activeSessionReviewStateLabelText}
+        activeSessionReviewStateLabel={props.activeSessionReviewStateLabel}
         analysisError={props.analysisError}
         analysisLaunchState={props.analysisLaunchState}
         analysisProfileId={props.analysisProfileId}

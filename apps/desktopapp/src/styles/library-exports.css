@@ -1,0 +1,45 @@
+.project-summary-group {
+  display: grid;
+  gap: 12px;
+}
+
+.project-summary-group > .panel-header {
+  margin-top: 6px;
+}
+
+.backlog-search-card .field-stack {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.backlog-search-card input {
+  width: 100%;
+}
+
+.project-summary-search-hit {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--surface-input-border);
+}
+
+.project-summary-search-hit p {
+  margin: 6px 0 0;
+  color: var(--text-dimmer);
+}
+
+.export-package-summary {
+  margin-top: 12px;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--surface-input-border);
+}
+
+.export-package-summary p,
+.export-package-summary li {
+  color: var(--text-dimmer);
+}
+
+.export-package-summary ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}

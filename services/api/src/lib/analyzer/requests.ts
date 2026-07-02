@@ -30,6 +30,7 @@ import {
   type MediaIndexJob,
   type MediaLibraryAsset,
   type ProjectSession,
+  type ProjectSessionSearchResult,
   type ProjectSessionSummary,
   type ReplaceMediaThumbnailOutputsRequest,
   type ReviewUpdateRequest,
@@ -50,6 +51,7 @@ import {
   parsePairResponse,
   parseProfileListResponse,
   parseProfileResponse,
+  parseSessionSearchResponse,
   parseSessionResponse,
   parseSessionSummaryListResponse,
 } from "./parsers.js";
@@ -89,6 +91,17 @@ export async function requestSessionSummaries(): Promise<
 > {
   const response = await fetchAnalyzer("/sessions");
   return parseSessionSummaryListResponse(response);
+}
+
+export async function requestSessionSearchResults(
+  query: string,
+): Promise<ProjectSessionSearchResult[]> {
+  const normalizedQuery = query.trim();
+  if (!normalizedQuery) return [];
+  const response = await fetchAnalyzer(
+    `/sessions/search?query=${encodeURIComponent(normalizedQuery)}`,
+  );
+  return parseSessionSearchResponse(response);
 }
 
 export async function requestProfiles(): Promise<ClipProfile[]> {

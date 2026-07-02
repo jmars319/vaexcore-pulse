@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import unittest
 import wave
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -52,6 +53,7 @@ from vaexcore_pulse_analyzer.service import (
     list_session_summaries_request,
     load_session_request,
     run_media_index_job_inline,
+    search_sessions_request,
 )
 from vaexcore_pulse_analyzer.storage.session_store import SessionStore
 
@@ -313,6 +315,86 @@ class AnalyzerScaffoldTests(unittest.TestCase):
             self.assertEqual(saved.analysis_provenance.state.value, "PARTIAL")
             self.assertEqual(saved.analysis_provenance.transcript_source, "imported")
             self.assertEqual(saved.analysis_provenance.audio_signal_source, "transcript-heuristic")
+
+    def test_project_library_search_matches_transcripts_decisions_and_exports(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            database_path = str(Path(temp_dir) / "vaexcore-pulse.sqlite3")
+            session = analyze_media(None, settings=Settings(use_mock_data=True))
+            session.id = "session_library_search"
+            session.title = "Searchable reaction library"
+            session.transcript[0].text = "Operator needle phrase in transcript."
+            session.candidates[0].editable_label = "Needle reaction candidate"
+
+            store = SessionStore(database_path)
+            store.initialize()
+            store.save_session(session)
+            apply_review_update(
+                session.id,
+                session.candidates[0].id,
+                action="ACCEPT",
+                label="Approved needle export",
+                notes="Operator approved for export package.",
+                database_path=database_path,
+            )
+
+            transcript_results = search_sessions_request(
+                "needle phrase",
+                database_path=database_path,
+            )
+            self.assertEqual(transcript_results[0]["session_id"], session.id)
+            self.assertIn("transcript", transcript_results[0]["matched_fields"])
+
+            export_results = search_sessions_request(
+                "approved",
+                database_path=database_path,
+            )
+            self.assertEqual(export_results[0]["session_id"], session.id)
+            self.assertIn("decision", export_results[0]["matched_fields"])
+            self.assertIn("export", export_results[0]["matched_fields"])
+
+    def test_large_session_persistence_keeps_restart_counts_and_searchable_text(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            database_path = str(Path(temp_dir) / "vaexcore-pulse.sqlite3")
+            session = analyze_media(None, settings=Settings(use_mock_data=True))
+            session.id = "session_large_library"
+            session.title = "Large library session"
+            source_candidates = session.candidates
+            source_transcript = session.transcript
+            session.candidates = [
+                replace(
+                    source_candidates[index % len(source_candidates)],
+                    id=f"candidate_large_{index}",
+                    editable_label=f"Large candidate {index}",
+                    transcript_snippet=f"Large searchable anchor {index}",
+                )
+                for index in range(300)
+            ]
+            session.transcript = [
+                replace(
+                    source_transcript[index % len(source_transcript)],
+                    id=f"chunk_large_{index}",
+                    start_seconds=float(index * 10),
+                    end_seconds=float(index * 10 + 4),
+                    text=f"Large transcript anchor {index}",
+                )
+                for index in range(600)
+            ]
+
+            store = SessionStore(database_path)
+            store.initialize()
+            store.save_session(session)
+            loaded = load_session_request(session.id, database_path=database_path)
+            summaries = list_session_summaries_request(database_path=database_path)
+            results = search_sessions_request(
+                "large transcript anchor 599",
+                database_path=database_path,
+            )
+
+            self.assertEqual(len(loaded.candidates), 300)
+            self.assertEqual(len(loaded.transcript), 600)
+            self.assertEqual(summaries[0]["candidate_count"], 300)
+            self.assertEqual(summaries[0]["pending_count"], 300)
+            self.assertEqual(results[0]["session_id"], session.id)
 
     @unittest.skipUnless(
         shutil.which("ffmpeg") and shutil.which("ffprobe"),

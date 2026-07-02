@@ -129,9 +129,7 @@ export function DesktopWorkspaceFrame({
       currentProfileLabel={review.currentProfile.name}
       currentSessionLabel={review.projectSession?.title ?? "No session loaded"}
       nextPendingSession={review.nextPendingSession}
-      onLaunchSuite={() => {
-        void suite.handleLaunchSuite();
-      }}
+      onLaunchSuite={() => void suite.handleLaunchSuite()}
       onPickMedia={onPickMedia}
       onSelectPage={onSelectPage}
       pendingReviewCount={review.pendingReviewCount}
@@ -159,9 +157,6 @@ export function DesktopWorkspaceFrame({
           activePage={activePage}
           activeSessionReviewState={review.activeSessionReviewState}
           activeSessionReviewStateLabel={review.activeSessionReviewStateLabel}
-          activeSessionReviewStateLabelText={
-            review.activeSessionReviewStateLabel
-          }
           analysisError={analysisError}
           analysisLaunchState={analysisLaunchState}
           analysisProfileId={analysisProfileId}
@@ -182,6 +177,7 @@ export function DesktopWorkspaceFrame({
           isExportingToStudio={studioExport.isExportingToStudio}
           isLoadingProfiles={isLoadingProfiles}
           isLoadingProjects={review.isLoadingProjects}
+          isSearchingProjects={review.isSearchingProjects}
           isSavingCandidateEdit={review.isSavingCandidateEdit}
           isSavingReview={review.isSavingReview}
           isStrongMatchFallback={review.isStrongMatchFallback}
@@ -212,16 +208,14 @@ export function DesktopWorkspaceFrame({
           onExpandResolution={review.handleExpandResolution}
           onExpandSetup={review.handleExpandSetup}
           onLabelChange={review.handleLabelChange}
-          onLaunchSuite={() => {
-            void suite.handleLaunchSuite();
-          }}
+          onLaunchSuite={() => void suite.handleLaunchSuite()}
           onOpenMomentPreview={review.handleOpenMomentPreview}
-          onOpenNextPendingSession={() => {
-            void review.handleOpenNextPendingSession();
-          }}
-          onOpenProject={(sessionId) => {
-            void review.handleOpenProject(sessionId);
-          }}
+          onOpenNextPendingSession={() =>
+            void review.handleOpenNextPendingSession()
+          }
+          onOpenProject={(sessionId) =>
+            void review.handleOpenProject(sessionId)
+          }
           onPickMedia={onPickMedia}
           onPickTranscript={onPickTranscript}
           onPresentationModeChange={review.setPresentationMode}
@@ -238,6 +232,7 @@ export function DesktopWorkspaceFrame({
           onSaveLabel={review.handleSaveLabel}
           onScanAnotherVideo={onScanAnotherVideo}
           onSearchChange={review.handleSearchChange}
+          onProjectSearchChange={review.setProjectSearchValue}
           onSelectCandidate={review.handleSelectCandidate}
           onSelectNextPending={review.handleSelectNextPending}
           onSelectNextVisible={review.handleSelectNextVisible}
@@ -252,6 +247,9 @@ export function DesktopWorkspaceFrame({
           pendingReviewCount={review.pendingReviewCount}
           pendingSessionCount={review.pendingSessionCount}
           presentationMode={review.presentationMode}
+          projectSearchError={review.projectSearchError}
+          projectSearchResults={review.projectSearchResults}
+          projectSearchValue={review.projectSearchValue}
           profileMatchingSummary={review.profileMatchingSummary}
           projectSession={review.projectSession}
           projectSummaries={review.projectSummaries}

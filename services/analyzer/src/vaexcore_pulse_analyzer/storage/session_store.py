@@ -2016,6 +2016,20 @@ class SessionStore:
 
         return summaries
 
+    def list_session_ids(self) -> list[str]:
+        with self._connection() as connection:
+            connection.row_factory = sqlite3.Row
+            connection.executescript(SCHEMA_SQL)
+            rows = connection.execute(
+                """
+                SELECT id
+                FROM project_sessions
+                ORDER BY updated_at DESC, created_at DESC
+                """
+            ).fetchall()
+            connection.commit()
+            return [str(row["id"]) for row in rows]
+
     # Row hydration boundary
     def _seed_system_profiles(self, connection: sqlite3.Connection) -> None:
         for profile in SYSTEM_PROFILES:

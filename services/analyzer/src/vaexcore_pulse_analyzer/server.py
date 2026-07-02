@@ -6,7 +6,7 @@ from dataclasses import asdict, is_dataclass
 from enum import Enum
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from .contracts import Settings
 from .pipeline.orchestrator import analyze_media
@@ -34,6 +34,7 @@ from .service import (
     list_profiles_request,
     list_session_summaries_request,
     load_session_request,
+    search_sessions_request,
 )
 
 
@@ -70,7 +71,8 @@ def _demo_mode_enabled() -> bool:
 class AnalyzerRequestHandler(BaseHTTPRequestHandler):
     # Read route boundary
     def do_GET(self) -> None:  # noqa: N802
-        request_path = urlparse(self.path).path
+        parsed_url = urlparse(self.path)
+        request_path = parsed_url.path
 
         if request_path == "/health":
             self._send_json(
@@ -100,6 +102,24 @@ class AnalyzerRequestHandler(BaseHTTPRequestHandler):
                 {
                     "status": "listed",
                     "sessions": _convert(summaries),
+                },
+            )
+            return
+
+        if request_path == "/sessions/search":
+            database_path = str(
+                os.getenv("VAEXCORE_PULSE_ANALYZER_DATABASE_PATH") or DEFAULT_DATABASE_PATH
+            )
+            query = parse_qs(parsed_url.query).get("query", [""])[0]
+            results = search_sessions_request(
+                query,
+                database_path=database_path,
+            )
+            self._send_json(
+                200,
+                {
+                    "status": "listed",
+                    "results": _convert(results),
                 },
             )
             return

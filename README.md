@@ -50,6 +50,8 @@ packages/
 - The Python analyzer is still scaffolded and intentionally lightweight.
 - Real local analysis now records transcript/audio quality signals, duplicate hints, and persistent candidate edit history.
 - The review workstation supports keep, skip, defer, retime, relabel, manual candidate creation, split, merge, rank adjustment, and transcript correction.
+- The saved-session backlog now works as a searchable library across titles, transcripts, decisions, review tags, and accepted export labels.
+- Export helpers include timestamp, YouTube chapter, shorts CSV, editor-handoff JSON, Pulse evidence JSON, and EDL presets as a batch package.
 - The API bridge runs from TypeScript with Fastify.
 - Packaging flows produce unsigned local app artifacts and tester handoff material.
 - The web and mobile surfaces are companion-oriented, not the main review station.

@@ -1,6 +1,7 @@
 import "./tests/health-route.test.js";
 import "./tests/local-media-route.test.js";
 import "./tests/project-summaries-bridge.test.js";
+import "./tests/project-search-route.test.js";
 import "./tests/analyzer-bridge-unreachable.test.js";
 import "./tests/analyzer-bridge-timeout.test.js";
 import "./tests/profile-example-routes.test.js";

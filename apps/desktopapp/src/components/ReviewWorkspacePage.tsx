@@ -1,8 +1,9 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useMemo } from "react";
 import type {
   summarizeReviewQueueState,
   ReviewQueueMode,
 } from "@vaexcore/pulse-domain";
+import { buildPulseBatchExportPackage } from "@vaexcore/pulse-export";
 import type {
   CandidateWindow,
   ConfidenceBand,
@@ -160,6 +161,17 @@ export function ReviewWorkspacePage({
   studioRecordingExportHistory,
   timestampPreview,
 }: ReviewWorkspacePageProps) {
+  const batchExportPackage = useMemo(
+    () =>
+      projectSession
+        ? buildPulseBatchExportPackage(
+            projectSession,
+            Object.values(decisionsByCandidateId),
+          )
+        : null,
+    [decisionsByCandidateId, projectSession],
+  );
+
   return (
     <section className="desktop-review-stack">
       {projectSession && activeSessionReviewState ? (
@@ -237,6 +249,7 @@ export function ReviewWorkspacePage({
           }
         >
           <CandidateDetail
+            batchExportPackage={batchExportPackage}
             candidate={selectedCandidate}
             candidateCount={sessionCandidates.length}
             candidateIndex={Math.max(selectedCandidateIndex, 0)}

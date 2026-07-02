@@ -174,7 +174,6 @@ export function useReviewWorkspaceDerivedState({
         Object.values(decisionsByCandidateId),
       )
     : "";
-
   return {
     acceptedCount,
     activeSessionReviewState,
