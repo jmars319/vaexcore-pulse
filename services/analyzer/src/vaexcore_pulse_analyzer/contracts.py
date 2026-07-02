@@ -62,6 +62,13 @@ class AnalysisCoverageFlag(str, Enum):
     NO_CANDIDATES = "NO_CANDIDATES"
 
 
+class AnalysisProvenanceState(str, Enum):
+    MOCK = "MOCK"
+    REAL = "REAL"
+    PARTIAL = "PARTIAL"
+    FAILED = "FAILED"
+
+
 class ExampleClipSourceType(str, Enum):
     TWITCH_CLIP_URL = "TWITCH_CLIP_URL"
     YOUTUBE_SHORT_URL = "YOUTUBE_SHORT_URL"
@@ -259,6 +266,15 @@ class AnalysisCoverage:
     band: AnalysisCoverageBand = AnalysisCoverageBand.PARTIAL
     note: str = "Coverage note unavailable for this session."
     flags: List[AnalysisCoverageFlag] = field(default_factory=list)
+
+
+@dataclass
+class AnalysisProvenance:
+    state: AnalysisProvenanceState = AnalysisProvenanceState.PARTIAL
+    method_version: str = "pulse-local-analyzer-v1"
+    transcript_source: str = "unknown"
+    audio_signal_source: str = "heuristic"
+    notes: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -610,3 +626,4 @@ class ProjectSession:
     created_at: str
     updated_at: str
     analysis_coverage: AnalysisCoverage = field(default_factory=AnalysisCoverage)
+    analysis_provenance: AnalysisProvenance = field(default_factory=AnalysisProvenance)

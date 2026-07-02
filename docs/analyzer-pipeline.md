@@ -17,6 +17,8 @@
 - module names and entrypoints are real
 - output contracts are real
 - real-file scans can use operator-imported SRT, VTT, timestamped text, plain text, JSON transcripts, local sidecar transcripts, or deterministic local anchors when no transcript provider is available
-- most acoustic analysis data is still deterministic local heuristic data
+- real-file scans use bounded local FFmpeg PCM analysis for loudness, onset, zero-crossing, peak, and silence-break signals when FFmpeg can decode the source
+- analyzer provenance is persisted with each session as `MOCK`, `REAL`, `PARTIAL`, or `FAILED`
+- transcript-derived estimates remain the graceful fallback when FFmpeg, metadata, transcript, or source media is unavailable
 
 This is intentional. The scaffold optimizes for believable architecture, not premature feature logic.

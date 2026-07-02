@@ -6,6 +6,8 @@ from .contracts import (
     AnalysisCoverage,
     AnalysisCoverageBand,
     AnalysisCoverageFlag,
+    AnalysisProvenance,
+    AnalysisProvenanceState,
     CandidateWindow,
     ConfidenceBand,
     FeatureWindow,
@@ -364,5 +366,11 @@ def build_mock_session(settings: Settings) -> ProjectSession:
                 "represent the current heuristic pipeline rather than real STT coverage."
             ),
             flags=[AnalysisCoverageFlag.SEEDED_TRANSCRIPT],
+        ),
+        analysis_provenance=AnalysisProvenance(
+            state=AnalysisProvenanceState.MOCK,
+            transcript_source="mock",
+            audio_signal_source="mock",
+            notes=["Deterministic mock session used for tests and demos."],
         ),
     )

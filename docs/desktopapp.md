@@ -36,7 +36,8 @@ The desktop app centers on four task areas:
 The Start surface can attach an operator-selected transcript file to a scan. The
 analyzer persists imported transcript chunks with the SQLite-backed project
 session, and the session overview labels the imported transcript provenance in
-the ingest notes.
+the ingest notes. Review sessions also show analyzer provenance so operators can
+distinguish mock, partial, and real local signal coverage before exporting.
 
 ## macOS Packaging
 

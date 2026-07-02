@@ -6,7 +6,9 @@ import {
 } from "./candidateReviewSchemas";
 import {
   analysisCoverageSchema,
+  analysisProvenanceSchema,
   defaultAnalysisCoverage,
+  defaultAnalysisProvenance,
   featureWindowSchema,
   mediaSourceSchema,
   speechRegionSchema,
@@ -30,6 +32,9 @@ export const projectSessionSchema = z.object({
   status: z.enum(["IDLE", "ANALYZING", "READY", "REVIEWING"]),
   mediaSource: mediaSourceSchema,
   analysisCoverage: analysisCoverageSchema.default(defaultAnalysisCoverage),
+  analysisProvenance: analysisProvenanceSchema.default(
+    defaultAnalysisProvenance,
+  ),
   profileId: z.string(),
   settings: settingsSchema,
   transcript: z.array(transcriptChunkSchema),

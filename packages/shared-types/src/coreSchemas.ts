@@ -52,6 +52,13 @@ export const analysisCoverageFlagSchema = z.enum([
   "NO_CANDIDATES",
 ]);
 
+export const analysisProvenanceStateSchema = z.enum([
+  "MOCK",
+  "REAL",
+  "PARTIAL",
+  "FAILED",
+]);
+
 export const analysisCoverageSchema = z.object({
   band: analysisCoverageBandSchema,
   note: z.string(),
@@ -63,6 +70,22 @@ export const defaultAnalysisCoverage = {
   note: "Coverage note unavailable for this session.",
   flags: [],
 } satisfies z.input<typeof analysisCoverageSchema>;
+
+export const analysisProvenanceSchema = z.object({
+  state: analysisProvenanceStateSchema,
+  methodVersion: z.string(),
+  transcriptSource: z.string(),
+  audioSignalSource: z.string(),
+  notes: z.array(z.string()).default([]),
+});
+
+export const defaultAnalysisProvenance = {
+  state: "PARTIAL",
+  methodVersion: "pulse-local-analyzer-v1",
+  transcriptSource: "unknown",
+  audioSignalSource: "heuristic",
+  notes: [],
+} satisfies z.input<typeof analysisProvenanceSchema>;
 
 export const timeRangeSchema = z
   .object({
@@ -138,6 +161,10 @@ export type ReviewTag = z.infer<typeof reviewTagSchema>;
 export type AnalysisCoverageBand = z.infer<typeof analysisCoverageBandSchema>;
 export type AnalysisCoverageFlag = z.infer<typeof analysisCoverageFlagSchema>;
 export type AnalysisCoverage = z.infer<typeof analysisCoverageSchema>;
+export type AnalysisProvenanceState = z.infer<
+  typeof analysisProvenanceStateSchema
+>;
+export type AnalysisProvenance = z.infer<typeof analysisProvenanceSchema>;
 export type TimeRange = z.infer<typeof timeRangeSchema>;
 export type MediaSource = z.infer<typeof mediaSourceSchema>;
 export type TranscriptChunk = z.infer<typeof transcriptChunkSchema>;

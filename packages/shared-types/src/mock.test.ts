@@ -15,6 +15,7 @@ describe("shared-types mock data", () => {
     assert.equal(session.profileId, "generic");
     assert.equal(session.candidates.length, 4);
     assert.equal(session.analysisCoverage.band, "PARTIAL");
+    assert.equal(session.analysisProvenance.state, "MOCK");
     assert.ok(session.analysisCoverage.note.length > 0);
 
     for (const candidate of session.candidates) {

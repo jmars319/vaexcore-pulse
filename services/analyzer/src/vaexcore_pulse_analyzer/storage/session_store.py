@@ -16,6 +16,8 @@ from ..contracts import (
     AnalysisCoverage,
     AnalysisCoverageBand,
     AnalysisCoverageFlag,
+    AnalysisProvenance,
+    AnalysisProvenanceState,
     CandidateProfileMatch,
     CandidateProfileMatchStatus,
     CandidateProfileMatchStrength,
@@ -3302,6 +3304,9 @@ class SessionStore:
             analysis_coverage=self._analysis_coverage_from_dict(
                 value.get("analysis_coverage"),
             ),
+            analysis_provenance=self._analysis_provenance_from_dict(
+                value.get("analysis_provenance"),
+            ),
         )
         if value.get("analysis_coverage") is None:
             session.analysis_coverage = self._derive_analysis_coverage(session)
@@ -3347,6 +3352,30 @@ class SessionStore:
                 value.get("note", "Coverage note unavailable for this session.")
             ),
             flags=flags,
+        )
+
+    def _analysis_provenance_from_dict(
+        self,
+        value: dict[str, Any] | None,
+    ) -> AnalysisProvenance:
+        if not value:
+            return AnalysisProvenance()
+
+        try:
+            state = AnalysisProvenanceState(
+                value.get("state", AnalysisProvenanceState.PARTIAL.value)
+            )
+        except ValueError:
+            state = AnalysisProvenanceState.PARTIAL
+
+        return AnalysisProvenance(
+            state=state,
+            method_version=str(
+                value.get("method_version", "pulse-local-analyzer-v1")
+            ),
+            transcript_source=str(value.get("transcript_source", "unknown")),
+            audio_signal_source=str(value.get("audio_signal_source", "heuristic")),
+            notes=[str(note) for note in value.get("notes", [])],
         )
 
     def _settings_from_dict(self, value: dict[str, Any]) -> Settings:

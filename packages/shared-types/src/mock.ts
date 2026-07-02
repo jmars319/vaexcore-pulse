@@ -30,6 +30,13 @@ export function createMockProjectSession(): ProjectSession {
       note: "Partial coverage: local metadata is available, but transcript anchors are still seeded heuristics.",
       flags: ["SEEDED_TRANSCRIPT"],
     },
+    analysisProvenance: {
+      state: "MOCK",
+      methodVersion: "pulse-local-analyzer-v1",
+      transcriptSource: "mock",
+      audioSignalSource: "mock",
+      notes: ["Deterministic mock session used for tests and demos."],
+    },
     profileId: "generic",
     settings: defaultSettings,
     transcript: [

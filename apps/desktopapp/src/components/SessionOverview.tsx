@@ -131,6 +131,17 @@ export function SessionOverview({
             <p>Updated {formatTimestamp(session.updatedAt)}</p>
           </article>
 
+          <article className="session-overview-card">
+            <span className="detail-label">Analyzer</span>
+            <strong>
+              {formatAnalysisProvenanceState(session.analysisProvenance.state)}
+            </strong>
+            <p>
+              {session.analysisProvenance.transcriptSource} transcript •{" "}
+              {session.analysisProvenance.audioSignalSource} audio
+            </p>
+          </article>
+
           <article
             className={`session-overview-card coverage ${analysisCoverageTone(session.analysisCoverage)}`}
           >
@@ -166,6 +177,17 @@ export function SessionOverview({
             </ul>
           </article>
         ) : null}
+
+        {session.analysisProvenance.notes.length > 0 ? (
+          <article className="session-overview-alert">
+            <span className="detail-label">Analyzer provenance</span>
+            <ul className="plain-list session-overview-note-list">
+              {session.analysisProvenance.notes.map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          </article>
+        ) : null}
       </details>
 
       {candidateCount === 0 ? (
@@ -179,6 +201,24 @@ export function SessionOverview({
       ) : null}
     </section>
   );
+}
+
+function formatAnalysisProvenanceState(
+  state: ProjectSession["analysisProvenance"]["state"],
+): string {
+  if (state === "REAL") {
+    return "Real local signals";
+  }
+
+  if (state === "MOCK") {
+    return "Mock/demo signals";
+  }
+
+  if (state === "FAILED") {
+    return "Signal analysis failed";
+  }
+
+  return "Partial local signals";
 }
 
 function formatLifecycleStatus(status: ProjectSession["status"]): string {

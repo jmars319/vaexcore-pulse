@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import math
 import os
 import shutil
 import struct
 import subprocess
 import tempfile
 import unittest
+import wave
 from pathlib import Path
 from unittest.mock import patch
 
@@ -51,6 +53,22 @@ from vaexcore_pulse_analyzer.service import (
     run_media_index_job_inline,
 )
 from vaexcore_pulse_analyzer.storage.session_store import SessionStore
+
+
+def _write_sine_wave(path: Path, *, duration_seconds: int) -> None:
+    sample_rate = 8_000
+    frame_count = sample_rate * duration_seconds
+    with wave.open(str(path), "wb") as audio_file:
+        audio_file.setnchannels(1)
+        audio_file.setsampwidth(2)
+        audio_file.setframerate(sample_rate)
+        frames = bytearray()
+        for index in range(frame_count):
+            sample = int(
+                10_000 * math.sin(2 * math.pi * 440 * index / sample_rate)
+            )
+            frames.extend(struct.pack("<h", sample))
+        audio_file.writeframes(bytes(frames))
 
 
 # Analyzer fixture boundary
@@ -144,6 +162,7 @@ class AnalyzerScaffoldTests(unittest.TestCase):
         session = analyze_media(None, settings=Settings(use_mock_data=True))
         self.assertGreaterEqual(len(session.candidates), 4)
         self.assertTrue(any(candidate.confidence_band.value == "HIGH" for candidate in session.candidates))
+        self.assertEqual(session.analysis_provenance.state.value, "MOCK")
 
     def test_session_store_persists_candidates(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -289,6 +308,53 @@ class AnalyzerScaffoldTests(unittest.TestCase):
             self.assertIn(
                 "Imported payoff",
                 " ".join(chunk.text for chunk in saved.transcript),
+            )
+            self.assertEqual(saved.analysis_provenance.state.value, "PARTIAL")
+            self.assertEqual(saved.analysis_provenance.transcript_source, "imported")
+            self.assertEqual(saved.analysis_provenance.audio_signal_source, "transcript-heuristic")
+
+    @unittest.skipUnless(
+        shutil.which("ffmpeg") and shutil.which("ffprobe"),
+        "ffmpeg and ffprobe unavailable",
+    )
+    def test_real_file_request_marks_full_local_signal_provenance(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            media_path = Path(temp_dir) / "local-signals.wav"
+            _write_sine_wave(media_path, duration_seconds=20)
+            transcript_path = Path(temp_dir) / "local-signals.srt"
+            transcript_path.write_text(
+                "\n".join(
+                    [
+                        "1",
+                        "00:00:04,000 --> 00:00:08,000",
+                        "wait wait no way the timing worked.",
+                        "",
+                        "2",
+                        "00:00:12,000 --> 00:00:16,000",
+                        "here we go push now and finish.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            session = analyze_request(
+                str(media_path),
+                profile_id="generic",
+                session_title="Local signals",
+                transcript_path=str(transcript_path),
+                persist=False,
+                database_path=str(Path(temp_dir) / "vaexcore-pulse.sqlite3"),
+            )
+
+            self.assertGreaterEqual(len(session.candidates), 1)
+            self.assertEqual(session.analysis_provenance.state.value, "REAL")
+            self.assertEqual(session.analysis_provenance.transcript_source, "imported")
+            self.assertEqual(session.analysis_provenance.audio_signal_source, "ffmpeg-pcm")
+            self.assertTrue(
+                any(
+                    window.rms_loudness > 0.22
+                    for window in session.feature_windows
+                )
             )
 
     @unittest.skipUnless(hasattr(os, "mkfifo"), "mkfifo unavailable on this platform")

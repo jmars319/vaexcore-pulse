@@ -17,7 +17,9 @@ The API service is the stable bridge between UI apps and backend logic.
 `POST /api/projects/analyze` accepts `sourcePath`, optional `profileId`,
 optional `sessionTitle`, and optional `transcriptPath`. `transcriptPath` points
 to a local SRT, VTT, timestamped text, plain text, or JSON transcript file and is
-forwarded only to the local analyzer service.
+forwarded only to the local analyzer service. Session responses include
+`analysisProvenance` so UI clients can distinguish mock, real, partial, and
+failed local analyzer signal coverage.
 
 ## Current Direction
 
